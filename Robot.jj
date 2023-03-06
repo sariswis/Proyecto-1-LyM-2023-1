@@ -19,8 +19,6 @@ import java.util.HashMap;
 import java.lang.String;
 import java.util.ArrayList;
 
-@SuppressWarnings("serial")
-
 public class Robot 
 {
 	private RobotWorldDec world;
@@ -138,16 +136,20 @@ public class Robot
 
 	class Conditional {
 		private String str;
-		private String var1;
-		private String var2;
+		private Condition con;
+		private String var;
 
-		public Conditional(Token str, Token var1, Token var2){
+		public Conditional(Token str, Condition con){
 			this.str = str.image.toLowerCase();
-			this.var1 = var1.image.toLowerCase();
-			this.var2 = var2.image.toLowerCase();
+			this.con = con;
+		}
+
+		public Conditional(Token str, Token var){
+			this.str = str.image.toLowerCase();
+			this.var = var.image.toLowerCase();
 		}
 	}
-
+	
 	class Condition {
 		private String con;
 		private String var1;
@@ -157,6 +159,11 @@ public class Robot
 			this.con = con.image.toLowerCase();
 			this.var1 = var1.image.toLowerCase();
 			this.var2 = var2.image.toLowerCase();
+		}
+
+		public Condition(Token con, Token var1){
+			this.con = con.image.toLowerCase();
+			this.var1 = var1.image.toLowerCase();
 		}
 
 		public boolean run(){
@@ -322,9 +329,9 @@ void instruction() : {} {
 	commands() | procedureCall() | controlStructure() 
 }
 
-void commands() : {Token com = null; Token var1 = null; Token var2 = null;} {
+void commands() : {Token com; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
-	(com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME>
+	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME>
 	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariable(var2);})
 	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);})
 	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>)
@@ -332,7 +339,7 @@ void commands() : {Token com = null; Token var1 = null; Token var2 = null;} {
 	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <X_OBJECT>
 	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>)
 	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION>
-	| com = <nop> <COLON>)
+	| com = <nop> <COLON>
 }
 
 void procedureCall() : {Token function; Token var;} {
@@ -340,19 +347,19 @@ void procedureCall() : {Token function; Token var;} {
 	((var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}))*)*
 }
 
-void controlStructure() : {Token str = null; Token var = null;} {
-	str = <IF> <COLON> condition() <THEN> <COLON> (blockInstructions() | instruction()) <ELSE> <COLON> (blockInstructions() | instruction())
-	| str = <WHILE> <COLON> condition() <DO> <COLON> (blockInstructions() | instruction()) 
-	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (blockInstructions() | instruction()) 
+Conditional controlStructure() : {Token str; Token var; Condition con;} {
+	str = <IF> <COLON> con = condition() <THEN> <COLON> (blockInstructions() | instruction()) <ELSE> <COLON> (blockInstructions() | instruction()) { return new Conditional(str, con); }
+	| str = <WHILE> <COLON> con = condition() <DO> <COLON> (blockInstructions() | instruction()) { return new Conditional(str, con); }
+	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (blockInstructions() | instruction()) { return new Conditional(str, var); }
 }
 
-void condition() : {Token con = null; Token var1 = null; Token var2 = null;} {
+Condition condition() : {Token con; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
-	(con = <facing> <COLON> var1 = <ORIENTATION>
-	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <X_OBJECT>
-	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION>
-	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>)
-	| <not> <COLON> condition())
+	con = <facing> <COLON> var1 = <ORIENTATION> {return new Condition(con, var1);}
+	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
+	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
+	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
+	| con = <not> <COLON> condition()
 }
 
 
