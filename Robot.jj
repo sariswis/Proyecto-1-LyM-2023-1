@@ -141,7 +141,7 @@ public class Robot
 		private String var1;
 		private String var2;
 
-		public Condition(Token str, Token var1, Token var2){
+		public Conditional(Token str, Token var1, Token var2){
 			this.str = str.image.toLowerCase();
 			this.var1 = var1.image.toLowerCase();
 			this.var2 = var2.image.toLowerCase();
@@ -162,36 +162,37 @@ public class Robot
 		public boolean run(){
 			int x;
 			int y;
+			boolean r = false;
 			switch(con) {
 			case "facing":
 				if (var1 == "north"){
-					return world.facingNorth();
+					r = world.facingNorth();
 				} else if (var1 == "south"){
-					return world.facingSouth();
+					r = world.facingSouth();
 				} else if (var1 == "east"){
-					return world.facingEast();
+					r = world.facingEast();
 				} else {
-					return world.facingWest();
+					r = world.facingWest();
 				}
 				break;
 			case "canput":
 				x = Integer.parseInt(var1);
 				if (var2 == "chips" && x < 2){
-					return !world.chipExists();
+					r = !world.chipExists();
 				} else if (var2 == "balloons"){
-					return !world.containsBallons();
+					r = !world.containsBallons();
 				}
 				break;
 			case "canpick":
 				x = Integer.parseInt(var1);
 				if (var2 == "chips" && x < 2){
-					return world.chipExists();
+					r = world.chipExists();
 				} else if (var2 == "balloons"){
-					return world.countBallons() >= x;
+					r = world.countBalloons() >= x;
 				}
 				break;
-			default: return false;
-		}
+			default: r = false;
+		} return r;
 		}
 }
 
@@ -284,8 +285,8 @@ TOKEN : /* Variables */
  * SECTION 3: PRODUCTION RULES
  */
 
-void program() : {} {
-	<ROBOT_R> (declaration())? (procedures())? blockInstructions() <EOF>
+boolean command(Console sistema) : {salida=new String();} {
+	<ROBOT_R> (declaration())? (procedures())? blockInstructions() <EOF> {return false;}
 }
 
 void declaration() : {Token var;} {
@@ -318,10 +319,10 @@ void blockInstructions() : {} {
 }
 
 void instruction() : {} {
-	command() | procedureCall() | controlStructure() 
+	commands() | procedureCall() | controlStructure() 
 }
 
-Command command() : {Token com = null; Token var1 = null; Token var2 = null;} {
+void commands() : {Token com = null; Token var1 = null; Token var2 = null;} {
   	//toThe -> Direction, inDir -> Orientation
 	(com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME>
 	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariable(var2);})
@@ -332,7 +333,6 @@ Command command() : {Token com = null; Token var1 = null; Token var2 = null;} {
 	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>)
 	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION>
 	| com = <nop> <COLON>)
-	{return new Command(com, var1, var2);}
 }
 
 void procedureCall() : {Token function; Token var;} {
@@ -340,20 +340,19 @@ void procedureCall() : {Token function; Token var;} {
 	((var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}))*)*
 }
 
-void controlStructure() : {Token str = null; Token var = null; Condition con = null;} {
-	str = <IF> <COLON> con = condition() <THEN> <COLON> (blockInstructions() | instruction()) <ELSE> <COLON> (blockInstructions() | instruction())
-	| str = <WHILE> <COLON> con = condition() <DO> <COLON> (blockInstructions() | instruction()) 
+void controlStructure() : {Token str = null; Token var = null;} {
+	str = <IF> <COLON> condition() <THEN> <COLON> (blockInstructions() | instruction()) <ELSE> <COLON> (blockInstructions() | instruction())
+	| str = <WHILE> <COLON> condition() <DO> <COLON> (blockInstructions() | instruction()) 
 	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (blockInstructions() | instruction()) 
 }
 
-Condition condition() : {Token con = null; Token var1 = null; Token var2 = null;} {
+void condition() : {Token con = null; Token var1 = null; Token var2 = null;} {
   	//toThe -> Direction, inDir -> Orientation
 	(con = <facing> <COLON> var1 = <ORIENTATION>
 	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <X_OBJECT>
 	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION>
 	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>)
 	| <not> <COLON> condition())
-	{return new Condition(con, var1, var2);}
 }
 
 
@@ -362,3 +361,4 @@ Condition condition() : {Token con = null; Token var1 = null; Token var2 = null;
 
 
 
+	
