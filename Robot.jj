@@ -26,21 +26,18 @@ public class Robot
 
 	private static HashMap variables = new HashMap();
 	private static HashMap functions = new HashMap();
-	private static ArrayList params = new ArrayList();
 	
 	public void setWorld(RobotWorld w) {
 		world = (RobotWorldDec) w;	
 	}
 
 	public static void addVariable(Token token){
-		String def = "";
         String image = token.image.toLowerCase();
-        variables.put(image, def);
+        variables.put(image, "");
 	}
 
-	public static void addParam(Token token){
-        String image = token.image.toLowerCase();
-        params.add(image);
+	public static void addFunction(Function function){
+        functions.put(function.getName(), function);
 	}
 
 	public static void assignVariable(Token number, Token token){
@@ -52,49 +49,73 @@ public class Robot
 			throw new Error("Couldn't assign " + number.image + " to undefined variable " + token.image + "\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
 	}
-    
-	public static void checkVariable(Token token){
-		if (!params.contains(token.image)){
-			if (variables.containsKey(token.image)){
-				String value = (String) variables.get(token.image);
-				if (value == ""){
-					throw new Error("The variable " + token.image + " has no value\nLine: " + token.beginLine + " Column: " + token.beginColumn);
-				}
-			} else {
-				throw new Error("The variable " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
-			}
+
+	public static void checkVariable(Token token, Token nameFunction){
+	  	String image = token.image.toLowerCase();
+		if (!variables.containsKey(image)){
+			Function function = getFunction(nameFunction);
+			String param = function.getParam(token);
 		}
 	}
 
 	public static void checkVariableF(Token token){
-		if (variables.containsKey(token.image)){
-			String value = (String) variables.get(token.image);
-			if (value == ""){
-				throw new Error("The variable " + token.image + " has no value\nLine: " + token.beginLine + " Column: " + token.beginColumn);
-			}
-		} else {
+		if (!variables.containsKey(token.image)){
 			throw new Error("The variable " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
 	}
 
-	public static void addFunction(Token token){
-		String image = token.image.toLowerCase();
-		functions.put(image, "");
-	}
-
-    public static void callFunction(Token token, ArrayList list){
-		if (functions.containsKey(token.image)){
-
+    public static Function getFunction(Token token){
+      String image = token.image.toLowerCase();
+		if (functions.containsKey(image)){
+			return (Function) functions.get(image);
 		} else {
 			throw new Error("The function " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
 	}
 
+
+	/* Clases */
+
 	class Function {
 	private String name;
 	private HashMap params = new HashMap();
 	private ArrayList<Instruction> instructions =  new ArrayList<Instruction>();
-	
+
+	public Function(Token name) {
+	  this.name = name.image.toLowerCase();
+	  }
+
+	 public void addParam(Token token){
+        String image = token.image.toLowerCase();
+        params.put(image, "");
+	  }
+
+	  public void addInstruction(Instruction instruction){
+        instructions.add(instruction);
+	  }
+
+	public String getName() {
+	  return name;
+	  }
+
+	 public String getParam(Token token) {
+	  String image = token.image.toLowerCase();
+	  if (params.containsKey(image)){
+	    return (String) params.get(image);
+	  } else {
+		throw new Error("The variable " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+	   }
+	   }
+
+	  public void setParam(Token token, Token value) {
+	  String image = token.image.toLowerCase();
+	  String imageValue = value.image.toLowerCase();
+	  if (params.containsKey(image)){
+	    params.put(image, imageValue);
+	  } else {
+		throw new Error("The variable " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+	   }
+	   }
 	 }
 
 	class Block {
@@ -173,8 +194,8 @@ public class Robot
 	class ProcedureCall extends Instruction {
 		private Function function;
 	  
-	  	public ProcedureCall(Token nameFunction) {
-
+	  	public ProcedureCall(Token name) {
+		this.function = Robot.getFunction(name);
 	  	 }
 	  	 
 		@Override
@@ -234,6 +255,7 @@ public class Robot
 		private String var1;
 		private String var2;
 		private Condition subcondition;
+		private int x;
 
 		public Condition(Token con, Token var1, Token var2){
 			this.con = con.image.toLowerCase();
@@ -252,8 +274,6 @@ public class Robot
 		}
 
 		public boolean run(){
-			int x;
-			int y;
 			boolean r = false;
 			switch(con) {
 			case "facing":
@@ -289,8 +309,8 @@ public class Robot
 			default: r = false;
 		} return r; }
 	}
+}
 
-} 
 
 
 PARSER_END(Robot)
@@ -378,10 +398,10 @@ TOKEN : /* Variables */
  * SECTION 3: PRODUCTION RULES
  */
 
-boolean command(Console sistema) : {salida=new String();} {
+boolean command(Console sistema) : {salida=new String(); Block block;} {
   // En Discord se dijo que La declaración de variables y procedimientos es opcional, el bloque de instrucciones es obligatorio
-	<ROBOT_R> (declaration())? (procedures())? blockInstructions() <EOF> 
-	{variables.clear(); functions.clear(); params.clear(); return false;}
+	<ROBOT_R> (declaration())? (procedures())? block = blockInstructionsF() <EOF> 
+	{block.run(); variables.clear(); functions.clear(); return false;}
 }
 
 void declaration() : {Token var;} {
@@ -397,71 +417,124 @@ void procedures() : {} {
   	<PROCS> (procedureDef())+
 }
 
-void procedureDef() : {Token function; Token var;} {
-	function = <NAME> {Robot.addFunction(function);} 
+void procedureDef() : {Token nameFunction; Token var; Function function; Instruction ins;} {
+	nameFunction = <NAME> { function = new Function(nameFunction);}
 	<O_BRACKET>
 	<V_BAR> 
-	(var = <NAME> {Robot.addParam(var);} (<COMMA> var = <NAME> {Robot.addParam(var);})*)* 
+	(var = <NAME> {function.addParam(var);} (<COMMA> var = <NAME> {function.addParam(var);})*)* 
 	<V_BAR>
-	instruction() (<SEMICOLON> instruction())*
+	ins = instruction(nameFunction) {function.addInstruction(ins);} (<SEMICOLON> ins = instruction(nameFunction) {function.addInstruction(ins);})*
 	<C_BRACKET>
+	{Robot.addFunction(function);} 
 }
 
-Block blockInstructions() : {Block block = new Block(); Instruction ins;} {
-	<O_BRACKET>
-	ins = instruction() {block.addInstruction(ins); } (<SEMICOLON> ins = instruction() {block.addInstruction(ins); })*
-	<C_BRACKET>
-	{ return block; }
+Instruction instruction(Token nameFunction) : {Instruction ins;} {
+	ins = commands(nameFunction) { return ins; }
+	| ins = procedureCall(nameFunction) { return ins; }
+	| ins = controlStructure(nameFunction) { return ins; }
 }
 
-Block oneInstruction() : {Block block = new Block(); Instruction ins;} {
-	ins = instruction() {block.addInstruction(ins); }
-	{ return block; }
-}
-
-Instruction instruction() : {Instruction ins;} {
-	ins = commands() { return ins; }
-	| ins = procedureCall() { return ins; }
-	| ins = controlStructure() { return ins; }
-	
-}
-
-Command commands() : {Token com; Token var1; Token var2;} {
+Command commands(Token nameFunction) : {Token com; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
 	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> {return new Command(com, var1, var2) ;}
-	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariable(var2);}) {return new Command(com, var1, var2) ;}
-	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) {return new Command(com, var1) ;}
+	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariable(var2, nameFunction);}) {return new Command(com, var1, var2) ;}
+	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) {return new Command(com, var1) ;}
 	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>) {return new Command(com, var1) ;}
 	| com = <face> <COLON> var1 = <ORIENTATION> {return new Command(com, var1) ;}
-	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
-	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
-	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
+	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
+	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
+	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
 	| com = <nop> <COLON> {return new Command(com) ;}
 }
 
-ProcedureCall procedureCall() : {Token function; Token var; ProcedureCall call;} {
-	function = <NAME> <COLON> { call = new ProcedureCall(function);}
-	((var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}))*)*
+ProcedureCall procedureCall(Token nameFunction) : {Token name; Token var; ProcedureCall call;} {
+	name = <NAME> <COLON> { call = new ProcedureCall(name);}
+	((var = <NUMBER> | var = <NAME> {Robot.checkVariable(var, nameFunction);}) (<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var, nameFunction);}))*)*
+	{ return call;}
 }
 
-ControlStructure controlStructure() : {Token str; Token var; Condition con; Block block1; Block block2;} {
+ControlStructure controlStructure(Token nameFunction) : {Token str; Token var; Condition con; Block block1; Block block2;} {
   //En Discord se dijo que Si no se exigen corchetes en un bloque, es porque es una sola instrucción
-	str = <IF> <COLON> con = condition() <THEN> <COLON> (block1 = blockInstructions() | block1 = oneInstruction()) <ELSE> <COLON> (block2 = blockInstructions() | block2 = oneInstruction()) { return new ControlStructure(str, con, block1, block2); }
-	| str = <WHILE> <COLON> con = condition() <DO> <COLON> (block1 = blockInstructions() | block1 = oneInstruction()) { return new ControlStructure(str, con, block1); }
-	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (block1 = blockInstructions() | block1 = oneInstruction()) { return new ControlStructure(str, var, block1); }
+	str = <IF> <COLON> con = condition(nameFunction) <THEN> <COLON> (block1 = blockInstructions(nameFunction) | block1 = oneInstruction(nameFunction)) <ELSE> <COLON> (block2 = blockInstructions(nameFunction) | block2 = oneInstruction(nameFunction)) { return new ControlStructure(str, con, block1, block2); }
+	| str = <WHILE> <COLON> con = condition(nameFunction) <DO> <COLON> (block1 = blockInstructions(nameFunction) | block1 = oneInstruction(nameFunction)) { return new ControlStructure(str, con, block1); }
+	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var, nameFunction);}) (block1 = blockInstructions(nameFunction) | block1 = oneInstruction(nameFunction)) { return new ControlStructure(str, var, block1); }
 }
 
-Condition condition() : {Token con; Token var1; Token var2; Condition subcondition;} {
+Condition condition(Token nameFunction) : {Token con; Token var1; Token var2; Condition subcondition;} {
   	//toThe -> Direction, inDir -> Orientation
 	con = <facing> <COLON> var1 = <ORIENTATION> {return new Condition(con, var1);}
-	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
-	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
-	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
-	| con = <not> <COLON> subcondition = condition() { return new Condition(con, subcondition); }
+	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
+	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
+	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
+	| con = <not> <COLON> subcondition = condition(nameFunction) { return new Condition(con, subcondition); }
 }
 
+Block blockInstructions(Token nameFunction) : {Block block = new Block(); Instruction ins;} {
+	<O_BRACKET>
+	ins = instruction(nameFunction) {block.addInstruction(ins); } (<SEMICOLON> ins = instruction(nameFunction) {block.addInstruction(ins); })*
+	<C_BRACKET>
+	{ return block; }
+}
 
+Block oneInstruction(Token nameFunction) : {Block block = new Block(); Instruction ins;} {
+	ins = instruction(nameFunction) {block.addInstruction(ins); }
+	{ return block; }
+}
 
+/* Final Block */
+
+Block blockInstructionsF() : {Block block = new Block(); Instruction ins;} {
+	<O_BRACKET>
+	ins = instructionF() {block.addInstruction(ins); } (<SEMICOLON> ins = instructionF() {block.addInstruction(ins); })*
+	<C_BRACKET>
+	{ return block; }
+}
+
+Instruction instructionF() : {Instruction ins;} {
+	ins = commandsF() { return ins; }
+	| ins = procedureCallF() { return ins; }
+	| ins = controlStructureF() { return ins; }
+}
+
+Command commandsF() : {Token com; Token var1; Token var2;} {
+  	//toThe -> Direction, inDir -> Orientation
+	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> {return new Command(com, var1, var2) ;}
+	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariableF(var2);}) {return new Command(com, var1, var2) ;}
+	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) {return new Command(com, var1) ;}
+	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>) {return new Command(com, var1) ;}
+	| com = <face> <COLON> var1 = <ORIENTATION> {return new Command(com, var1) ;}
+	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
+	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
+	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
+	| com = <nop> <COLON> {return new Command(com) ;}
+}
+
+ProcedureCall procedureCallF() : {Token name; Token var; ProcedureCall call;} {
+	name = <NAME> <COLON> { call = new ProcedureCall(name);}
+	((var = <NUMBER> | var = <NAME> {Robot.checkVariableF(var);}) (<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariableF(var);}))*)*
+	{ return call;}
+}
+
+ControlStructure controlStructureF() : {Token str; Token var; Condition con; Block block1; Block block2;} {
+  //En Discord se dijo que Si no se exigen corchetes en un bloque, es porque es una sola instrucción
+	str = <IF> <COLON> con = conditionF() <THEN> <COLON> (block1 = blockInstructionsF() | block1 = oneInstructionF()) <ELSE> <COLON> (block2 = blockInstructionsF() | block2 = oneInstructionF()) { return new ControlStructure(str, con, block1, block2); }
+	| str = <WHILE> <COLON> con = conditionF() <DO> <COLON> (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, con, block1); }
+	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariableF(var);}) (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, var, block1); }
+}
+
+Condition conditionF() : {Token con; Token var1; Token var2; Condition subcondition;} {
+  	//toThe -> Direction, inDir -> Orientation
+	con = <facing> <COLON> var1 = <ORIENTATION> {return new Condition(con, var1);}
+	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
+	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
+	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
+	| con = <not> <COLON> subcondition = conditionF() { return new Condition(con, subcondition); }
+}
+
+Block oneInstructionF() : {Block block = new Block(); Instruction ins;} {
+	ins = instructionF() {block.addInstruction(ins); }
+	{ return block; }
+}
 
 
 
