@@ -25,8 +25,8 @@ public class Robot
 	public String salida = new String();
 
 	private static HashMap variables = new HashMap();
-	private static HashMap<String, String> functions = new HashMap<String, String>();
-	private static ArrayList<String> params = new ArrayList<String>();
+	private static HashMap functions = new HashMap();
+	private static ArrayList params = new ArrayList();
 	
 	public void setWorld(RobotWorld w) {
 		world = (RobotWorldDec) w;	
@@ -90,10 +90,38 @@ public class Robot
 		}
 	}
 
-	class Command {
+	class Function {
+	private String name;
+	private HashMap params = new HashMap();
+	private ArrayList<Instruction> instructions =  new ArrayList<Instruction>();
+	
+	 }
+
+	class Block {
+	private ArrayList<Instruction> instructions =  new ArrayList<Instruction>();
+
+	public void addInstruction(Instruction instruction) {
+	instructions.add(instruction);
+	 }
+
+	 public void  run() {
+		for (Instruction instruction: instructions) {
+		instruction.run();
+		  }
+	 }
+	 
+	 }
+
+	abstract class Instruction {
+	abstract void run();
+	}
+
+	class Command  extends Instruction {
 		private String com;
 		private String var1;
 		private String var2;
+		private int x;
+		private int y;
 
 		public Command(Token com, Token var1, Token var2){
 			this.com = com.image.toLowerCase();
@@ -101,9 +129,17 @@ public class Robot
 			this.var2 = var2.image.toLowerCase();
 		}
 
+		public Command(Token com, Token var1){
+			this.com = com.image.toLowerCase();
+			this.var1 = var1.image.toLowerCase();
+		}
+
+		public Command(Token com){
+			this.com = com.image.toLowerCase();
+		}
+		
+		@Override
 		public void run(){
-			int x;
-			int y;
 			switch(com) {
 			case "goto":
 				x = Integer.parseInt(var1);
@@ -130,23 +166,66 @@ public class Robot
 					world.grabBalloons(x);
 				}
 				break;
-		}
+			}
 		}
 	}
 
-	class Conditional {
+	class ProcedureCall extends Instruction {
+		private Function function;
+	  
+	  	public ProcedureCall(Token nameFunction) {
+
+	  	 }
+	  	 
+		@Override
+		public void run(){
+
+		}
+	}
+
+	class ControlStructure extends Instruction {
 		private String str;
 		private Condition con;
-		private String var;
+		private int var;
+		private Block block1;
+		private Block block2;
 
-		public Conditional(Token str, Condition con){
+		public ControlStructure(Token str, Condition con, Block block1, Block block2){
 			this.str = str.image.toLowerCase();
 			this.con = con;
+			this.block1 = block1;
+			this.block2 = block2;
 		}
 
-		public Conditional(Token str, Token var){
+		public ControlStructure(Token str, Condition con, Block block1){
 			this.str = str.image.toLowerCase();
-			this.var = var.image.toLowerCase();
+			this.con = con;
+			this.block1 = block1;
+		}
+
+		public ControlStructure(Token str, Token var, Block block1){
+			this.str = str.image.toLowerCase();
+			this.var = Integer.parseInt(var.image.toLowerCase());
+			this.block1 = block1;
+		}
+
+		@Override
+		public void run() {
+			if (str == "if") {
+			  if (con.run()) {
+			  block1.run();
+			  } else {
+				block2.run();
+			  }
+			} else if (str == "while") { 
+			  while(con.run()) {
+			    block1.run();
+			    }
+			} else if (str == "repeat"){
+				for (int i = 0;  i < var;  i++) {
+				block1.run();
+				 }
+			 }
 		}
 	}
 	
@@ -154,6 +233,7 @@ public class Robot
 		private String con;
 		private String var1;
 		private String var2;
+		private Condition subcondition;
 
 		public Condition(Token con, Token var1, Token var2){
 			this.con = con.image.toLowerCase();
@@ -164,6 +244,11 @@ public class Robot
 		public Condition(Token con, Token var1){
 			this.con = con.image.toLowerCase();
 			this.var1 = var1.image.toLowerCase();
+		}
+
+		public Condition(Token con, Condition subcondition){
+			this.con = con.image.toLowerCase();
+			this.subcondition = subcondition;
 		}
 
 		public boolean run(){
@@ -198,13 +283,14 @@ public class Robot
 					r = world.countBalloons() >= x;
 				}
 				break;
+			case "not":
+				r = !subcondition.run();
+				break;
 			default: r = false;
-		} return r;
-		}
-}
+		} return r; }
+	}
 
-}
-
+} 
 
 
 PARSER_END(Robot)
@@ -293,7 +379,9 @@ TOKEN : /* Variables */
  */
 
 boolean command(Console sistema) : {salida=new String();} {
-	<ROBOT_R> (declaration())? (procedures())? blockInstructions() <EOF> {return false;}
+  // En Discord se dijo que La declaración de variables y procedimientos es opcional, el bloque de instrucciones es obligatorio
+	<ROBOT_R> (declaration())? (procedures())? blockInstructions() <EOF> 
+	{variables.clear(); functions.clear(); params.clear(); return false;}
 }
 
 void declaration() : {Token var;} {
@@ -319,47 +407,57 @@ void procedureDef() : {Token function; Token var;} {
 	<C_BRACKET>
 }
 
-void blockInstructions() : {} {
+Block blockInstructions() : {Block block = new Block(); Instruction ins;} {
 	<O_BRACKET>
-	instruction() (<SEMICOLON> instruction())*
+	ins = instruction() {block.addInstruction(ins); } (<SEMICOLON> ins = instruction() {block.addInstruction(ins); })*
 	<C_BRACKET>
+	{ return block; }
 }
 
-void instruction() : {} {
-	commands() | procedureCall() | controlStructure() 
+Block oneInstruction() : {Block block = new Block(); Instruction ins;} {
+	ins = instruction() {block.addInstruction(ins); }
+	{ return block; }
 }
 
-void commands() : {Token com; Token var1; Token var2;} {
+Instruction instruction() : {Instruction ins;} {
+	ins = commands() { return ins; }
+	| ins = procedureCall() { return ins; }
+	| ins = controlStructure() { return ins; }
+	
+}
+
+Command commands() : {Token com; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
-	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME>
-	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariable(var2);})
-	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);})
-	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>)
-	| com = <face> <COLON> var1 = <ORIENTATION>
-	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <X_OBJECT>
-	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>)
-	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION>
-	| com = <nop> <COLON>
+	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> {return new Command(com, var1, var2) ;}
+	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariable(var2);}) {return new Command(com, var1, var2) ;}
+	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) {return new Command(com, var1) ;}
+	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>) {return new Command(com, var1) ;}
+	| com = <face> <COLON> var1 = <ORIENTATION> {return new Command(com, var1) ;}
+	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
+	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
+	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
+	| com = <nop> <COLON> {return new Command(com) ;}
 }
 
-void procedureCall() : {Token function; Token var;} {
-	function = <NAME> <COLON> 
+ProcedureCall procedureCall() : {Token function; Token var; ProcedureCall call;} {
+	function = <NAME> <COLON> { call = new ProcedureCall(function);}
 	((var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}))*)*
 }
 
-Conditional controlStructure() : {Token str; Token var; Condition con;} {
-	str = <IF> <COLON> con = condition() <THEN> <COLON> (blockInstructions() | instruction()) <ELSE> <COLON> (blockInstructions() | instruction()) { return new Conditional(str, con); }
-	| str = <WHILE> <COLON> con = condition() <DO> <COLON> (blockInstructions() | instruction()) { return new Conditional(str, con); }
-	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (blockInstructions() | instruction()) { return new Conditional(str, var); }
+ControlStructure controlStructure() : {Token str; Token var; Condition con; Block block1; Block block2;} {
+  //En Discord se dijo que Si no se exigen corchetes en un bloque, es porque es una sola instrucción
+	str = <IF> <COLON> con = condition() <THEN> <COLON> (block1 = blockInstructions() | block1 = oneInstruction()) <ELSE> <COLON> (block2 = blockInstructions() | block2 = oneInstruction()) { return new ControlStructure(str, con, block1, block2); }
+	| str = <WHILE> <COLON> con = condition() <DO> <COLON> (block1 = blockInstructions() | block1 = oneInstruction()) { return new ControlStructure(str, con, block1); }
+	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var);}) (block1 = blockInstructions() | block1 = oneInstruction()) { return new ControlStructure(str, var, block1); }
 }
 
-Condition condition() : {Token con; Token var1; Token var2;} {
+Condition condition() : {Token con; Token var1; Token var2; Condition subcondition;} {
   	//toThe -> Direction, inDir -> Orientation
 	con = <facing> <COLON> var1 = <ORIENTATION> {return new Condition(con, var1);}
 	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
 	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
 	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
-	| con = <not> <COLON> condition()
+	| con = <not> <COLON> subcondition = condition() { return new Condition(con, subcondition); }
 }
 
 
