@@ -26,6 +26,8 @@ public class Robot
 
 	private static HashMap variables = new HashMap();
 	private static HashMap functions = new HashMap();
+
+	/* Robot Methods */
 	
 	public void setWorld(RobotWorld w) {
 		world = (RobotWorldDec) w;	
@@ -58,9 +60,14 @@ public class Robot
 		}
 	}
 
-	public static void checkVariableF(Token token){
-		if (!variables.containsKey(token.image)){
-			throw new Error("The variable " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+	public static Token checkVariableF(Token token){
+	  String image = token.image.toLowerCase();
+	  int kind = token.kind;
+		if (variables.containsKey(image)){
+			String value = (String)  variables.get(image);
+			return new Token(kind, value);
+		} else {
+		throw new Error("The variable " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
 	}
 
@@ -74,7 +81,7 @@ public class Robot
 	}
 
 
-	/* Clases */
+	/* Robot Classes */
 
 	class Function {
 	private String name;
@@ -162,6 +169,8 @@ public class Robot
 		@Override
 		public void run(){
 			switch(com) {
+			 case "assignto":
+				break;
 			case "goto":
 				x = Integer.parseInt(var1);
 				y = Integer.parseInt(var2);
@@ -193,9 +202,14 @@ public class Robot
 
 	class ProcedureCall extends Instruction {
 		private Function function;
+		private ArrayList values = new ArrayList();
 	  
 	  	public ProcedureCall(Token name) {
 		this.function = Robot.getFunction(name);
+	  	 }
+
+	  	public void addValue(Token token) {
+		values.add(token.image);
 	  	 }
 	  	 
 		@Override
@@ -411,7 +425,7 @@ void declaration() : {Token var;} {
 	<SEMICOLON>
 }
  
-/* Functions */
+/* Function Rules */
 
 void procedures() : {} {
   	<PROCS> (procedureDef())+
@@ -449,7 +463,8 @@ Command commands(Token nameFunction) : {Token com; Token var1; Token var2;} {
 
 ProcedureCall procedureCall(Token nameFunction) : {Token name; Token var; ProcedureCall call;} {
 	name = <NAME> <COLON> { call = new ProcedureCall(name);}
-	((var = <NUMBER> | var = <NAME> {Robot.checkVariable(var, nameFunction);}) (<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var, nameFunction);}))*)*
+	((var = <NUMBER> | var = <NAME> {Robot.checkVariable(var, nameFunction); }) { call.addValue(var);}
+	(<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariable(var, nameFunction);}) { call.addValue(var);})*)?
 	{ return call;}
 }
 
@@ -481,7 +496,7 @@ Block oneInstruction(Token nameFunction) : {Block block = new Block(); Instructi
 	{ return block; }
 }
 
-/* Final Block */
+/* Final Block Rules */
 
 Block blockInstructionsF() : {Block block = new Block(); Instruction ins;} {
 	<O_BRACKET>
@@ -498,20 +513,21 @@ Instruction instructionF() : {Instruction ins;} {
 
 Command commandsF() : {Token com; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
-	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> {return new Command(com, var1, var2) ;}
-	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariableF(var2);}) {return new Command(com, var1, var2) ;}
-	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) {return new Command(com, var1) ;}
+	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> { var2 = Robot.checkVariableF(var2); return new Command(com, var1, var2) ;}
+	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {var2 = Robot.checkVariableF(var2);}) {return new Command(com, var1, var2) ;}
+	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) {return new Command(com, var1) ;}
 	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>) {return new Command(com, var1) ;}
 	| com = <face> <COLON> var1 = <ORIENTATION> {return new Command(com, var1) ;}
-	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
-	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
-	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
+	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
+	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
+	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
 	| com = <nop> <COLON> {return new Command(com) ;}
 }
 
 ProcedureCall procedureCallF() : {Token name; Token var; ProcedureCall call;} {
 	name = <NAME> <COLON> { call = new ProcedureCall(name);}
-	((var = <NUMBER> | var = <NAME> {Robot.checkVariableF(var);}) (<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariableF(var);}))*)*
+	((var = <NUMBER> | var = <NAME> {var = Robot.checkVariableF(var);}) { call.addValue(var);}
+	(<COMMA> (var = <NUMBER> | var = <NAME> {var = Robot.checkVariableF(var);}) { call.addValue(var);})*)?
 	{ return call;}
 }
 
@@ -519,15 +535,15 @@ ControlStructure controlStructureF() : {Token str; Token var; Condition con; Blo
   //En Discord se dijo que Si no se exigen corchetes en un bloque, es porque es una sola instrucción
 	str = <IF> <COLON> con = conditionF() <THEN> <COLON> (block1 = blockInstructionsF() | block1 = oneInstructionF()) <ELSE> <COLON> (block2 = blockInstructionsF() | block2 = oneInstructionF()) { return new ControlStructure(str, con, block1, block2); }
 	| str = <WHILE> <COLON> con = conditionF() <DO> <COLON> (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, con, block1); }
-	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariableF(var);}) (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, var, block1); }
+	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {var = Robot.checkVariableF(var);}) (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, var, block1); }
 }
 
 Condition conditionF() : {Token con; Token var1; Token var2; Condition subcondition;} {
   	//toThe -> Direction, inDir -> Orientation
 	con = <facing> <COLON> var1 = <ORIENTATION> {return new Condition(con, var1);}
-	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
-	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
-	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
+	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
+	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
+	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
 	| con = <not> <COLON> subcondition = conditionF() { return new Condition(con, subcondition); }
 }
 
@@ -535,6 +551,7 @@ Block oneInstructionF() : {Block block = new Block(); Instruction ins;} {
 	ins = instructionF() {block.addInstruction(ins); }
 	{ return block; }
 }
+
 
 
 
