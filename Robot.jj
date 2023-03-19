@@ -14,6 +14,7 @@ package uniandes.lym.robot.control;
 
 import uniandes.lym.robot.kernel.*;
 import uniandes.lym.robot.view.Console;
+import java.awt.Point;
  
 import java.util.HashMap;
 import java.lang.String;
@@ -48,7 +49,7 @@ public class Robot
 		if (variables.containsKey(image)){
 			variables.put(image, num);
 		} else {
-			throw new Error("Couldn't assign " + number.image + " to undefined variable " + token.image + "\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+			throw new Error("Couldn't assign " + number.image + " to undefined variable " + image + "\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
 	}
 
@@ -60,14 +61,18 @@ public class Robot
 		}
 	}
 
-	public static Token checkVariableF(Token token){
+	public static Token getVariableF(Token token){
 	  String image = token.image.toLowerCase();
 	  int kind = token.kind;
 		if (variables.containsKey(image)){
 			String value = (String)  variables.get(image);
+			if (value != "") {
 			return new Token(kind, value);
+			  } else {
+			throw new Error("The variable " + image + " has no value\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+			  }
 		} else {
-		throw new Error("The variable " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+		throw new Error("The variable " + image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
 	}
 
@@ -76,7 +81,7 @@ public class Robot
 		if (functions.containsKey(image)){
 			return (Function) functions.get(image);
 		} else {
-			throw new Error("The function " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+			throw new Error("The function " + image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
 	}
 
@@ -85,7 +90,8 @@ public class Robot
 
 	class Function {
 	private String name;
-	private HashMap params = new HashMap();
+	private ArrayList params = new ArrayList();
+	private ArrayList values = new ArrayList();
 	private ArrayList<Instruction> instructions =  new ArrayList<Instruction>();
 
 	public Function(Token name) {
@@ -94,7 +100,12 @@ public class Robot
 
 	 public void addParam(Token token){
         String image = token.image.toLowerCase();
-        params.put(image, "");
+        params.add(image);
+	  }
+
+	  public void addValue(Token token){
+        String image = token.image.toLowerCase();
+        values.add(image);
 	  }
 
 	  public void addInstruction(Instruction instruction){
@@ -105,23 +116,26 @@ public class Robot
 	  return name;
 	  }
 
+	  public int getValuesSize() {
+	  return values.size();
+	  }
+
+	  public int getParamsSize() {
+	  return params.size();
+	  }
+
 	 public String getParam(Token token) {
 	  String image = token.image.toLowerCase();
-	  if (params.containsKey(image)){
-	    return (String) params.get(image);
+	  int index = params.indexOf(image);
+	  if (index != -1){
+	    return (String) params.get(index);
 	  } else {
-		throw new Error("The variable " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+		throw new Error("The variable " + image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 	   }
 	   }
 
-	  public void setParam(Token token, Token value) {
-	  String image = token.image.toLowerCase();
-	  String imageValue = value.image.toLowerCase();
-	  if (params.containsKey(image)){
-	    params.put(image, imageValue);
-	  } else {
-		throw new Error("The variable " + token.image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
-	   }
+	  public void run() {
+		System.out.println("Leyendo");
 	   }
 	 }
 
@@ -174,7 +188,11 @@ public class Robot
 			case "goto":
 				x = Integer.parseInt(var1);
 				y = Integer.parseInt(var2);
-				world.setPostion(x, y);
+				if (!world.isBlocked(new Point(x, y))) {
+				  world.setPostion(x, y);
+				} else {
+				System.out.println("Can't move to " + x + ", " + y);
+				}
 				break;
 			case "move":
 				x = Integer.parseInt(var1);
@@ -201,20 +219,27 @@ public class Robot
 	}
 
 	class ProcedureCall extends Instruction {
+	  	private Token name;
 		private Function function;
-		private ArrayList values = new ArrayList();
 	  
 	  	public ProcedureCall(Token name) {
+		this.name = name;
 		this.function = Robot.getFunction(name);
 	  	 }
 
-	  	public void addValue(Token token) {
-		values.add(token.image);
+	  	public void addValue(Token name) {
+		function.addValue(token);
 	  	 }
 	  	 
 		@Override
 		public void run(){
-
+		int valuesSize = function.getValuesSize();
+		int paramsSize = function.getParamsSize();
+		if (valuesSize == paramsSize) {
+	  		function.run();
+		  } else {
+			throw new Error("The function" + name.image.toLowerCase() + "must have " + paramsSize + " params, not " + valuesSize + "\nLine: " + name.beginLine + " Column: " + name.beginColumn);
+		    }
 		}
 	}
 
@@ -437,6 +462,7 @@ void procedureDef() : {Token nameFunction; Token var; Function function; Instruc
 	<V_BAR> 
 	(var = <NAME> {function.addParam(var);} (<COMMA> var = <NAME> {function.addParam(var);})*)* 
 	<V_BAR>
+	{Robot.addFunction(function);} 
 	ins = instruction(nameFunction) {function.addInstruction(ins);} (<SEMICOLON> ins = instruction(nameFunction) {function.addInstruction(ins);})*
 	<C_BRACKET>
 	{Robot.addFunction(function);} 
@@ -513,21 +539,21 @@ Instruction instructionF() : {Instruction ins;} {
 
 Command commandsF() : {Token com; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
-	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> { var2 = Robot.checkVariableF(var2); return new Command(com, var1, var2) ;}
-	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {var2 = Robot.checkVariableF(var2);}) {return new Command(com, var1, var2) ;}
-	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) {return new Command(com, var1) ;}
+	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> { var2 = Robot.getVariableF(var2); return new Command(com, var1, var2) ;}
+	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {var2 = Robot.getVariableF(var2);}) {return new Command(com, var1, var2) ;}
+	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) {return new Command(com, var1) ;}
 	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>) {return new Command(com, var1) ;}
 	| com = <face> <COLON> var1 = <ORIENTATION> {return new Command(com, var1) ;}
-	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
-	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
-	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
+	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
+	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
+	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
 	| com = <nop> <COLON> {return new Command(com) ;}
 }
 
 ProcedureCall procedureCallF() : {Token name; Token var; ProcedureCall call;} {
 	name = <NAME> <COLON> { call = new ProcedureCall(name);}
-	((var = <NUMBER> | var = <NAME> {var = Robot.checkVariableF(var);}) { call.addValue(var);}
-	(<COMMA> (var = <NUMBER> | var = <NAME> {var = Robot.checkVariableF(var);}) { call.addValue(var);})*)?
+	((var = <NUMBER> | var = <NAME> {var = Robot.getVariableF(var);}) { call.addValue(var);}
+	(<COMMA> (var = <NUMBER> | var = <NAME> {var = Robot.getVariableF(var);}) { call.addValue(var);})*)?
 	{ return call;}
 }
 
@@ -535,15 +561,15 @@ ControlStructure controlStructureF() : {Token str; Token var; Condition con; Blo
   //En Discord se dijo que Si no se exigen corchetes en un bloque, es porque es una sola instrucción
 	str = <IF> <COLON> con = conditionF() <THEN> <COLON> (block1 = blockInstructionsF() | block1 = oneInstructionF()) <ELSE> <COLON> (block2 = blockInstructionsF() | block2 = oneInstructionF()) { return new ControlStructure(str, con, block1, block2); }
 	| str = <WHILE> <COLON> con = conditionF() <DO> <COLON> (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, con, block1); }
-	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {var = Robot.checkVariableF(var);}) (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, var, block1); }
+	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {var = Robot.getVariableF(var);}) (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, var, block1); }
 }
 
 Condition conditionF() : {Token con; Token var1; Token var2; Condition subcondition;} {
   	//toThe -> Direction, inDir -> Orientation
 	con = <facing> <COLON> var1 = <ORIENTATION> {return new Condition(con, var1);}
-	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
-	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
-	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
+	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
+	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
+	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
 	| con = <not> <COLON> subcondition = conditionF() { return new Condition(con, subcondition); }
 }
 
