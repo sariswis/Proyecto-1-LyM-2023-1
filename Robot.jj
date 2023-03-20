@@ -408,7 +408,41 @@ public class Robot
 		    } else if  (variables.containsKey(var2)) {
 			var2 = (String) variables.get(var2);
 		    }
-		   return run();
+
+		   	boolean r = false;
+			switch(con) {
+			case "facing":
+				if (var1.equals("north")){
+					r = world.facingNorth();
+				} else if (var1.equals("south")){
+					r = world.facingSouth();
+				} else if (var1.equals("east")){
+					r = world.facingEast();
+				} else {
+					r = world.facingWest();
+				}
+				break;
+			case "canput":
+				x = Integer.parseInt(var1);
+				if (var2.equals("chips") && x < 2){
+					r = !world.chipExists();
+				} else if (var2.equals("balloons")){
+					r = !world.containsBallons();
+				}
+				break;
+			case "canpick":
+				x = Integer.parseInt(var1);
+				if (var2.equals("chips") && x < 2){
+					r = world.chipExists();
+				} else if (var2.equals("balloons")){
+					r = world.countBalloons() >= x;
+				}
+				break;
+			case "not":
+				r = !subcondition.runFunction(info);
+				break;
+			default: r = false; 
+		} return r;
 		}
 	}
 }
