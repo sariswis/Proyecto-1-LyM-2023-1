@@ -25,8 +25,8 @@ public class Robot
 	private RobotWorldDec world;
 	public String salida = new String();
 
-	private static HashMap variables = new HashMap();
-	private static HashMap functions = new HashMap();
+	private static HashMap<String, String> variables = new HashMap<String, String>();
+	private static HashMap<String, Function> functions = new HashMap<String, Function>();
 
 	/* Robot Methods */
 	
@@ -36,7 +36,7 @@ public class Robot
 
 	public static void addVariable(Token token){
         String image = token.image.toLowerCase();
-        variables.put(image, "");
+        variables.put(image, null);
 	}
 
 	public static void addFunction(Function function){
@@ -44,7 +44,7 @@ public class Robot
 	}
 
 	public static void assignVariable(Token number, Token token){
-        Integer num = Integer.parseInt(number.image.toLowerCase());
+        String num = number.image.toLowerCase();
         String image = token.image.toLowerCase();
 		if (variables.containsKey(image)){
 			variables.put(image, num);
@@ -66,7 +66,7 @@ public class Robot
 	  int kind = token.kind;
 		if (variables.containsKey(image)){
 			String value = (String)  variables.get(image);
-			if (value != "") {
+			if (value != null) {
 			return new Token(kind, value);
 			  } else {
 			throw new Error("The variable " + image + " has no value\nLine: " + token.beginLine + " Column: " + token.beginColumn);
@@ -90,9 +90,9 @@ public class Robot
 
 	class Function {
 	private String name;
-	private ArrayList params = new ArrayList();
-	private ArrayList values = new ArrayList();
+	private ArrayList<String> params = new ArrayList<String>();
 	private ArrayList<Instruction> instructions =  new ArrayList<Instruction>();
+	private HashMap<String, String> info = new HashMap<String, String>();
 
 	public Function(Token name) {
 	  this.name = name.image.toLowerCase();
@@ -103,25 +103,20 @@ public class Robot
         params.add(image);
 	  }
 
-	  public void addValue(Token token){
-        String image = token.image.toLowerCase();
-        values.add(image);
-	  }
-
 	  public void addInstruction(Instruction instruction){
         instructions.add(instruction);
+	  }
+
+	  public void addInfo(String key, String value) {
+		info.put(key, value);
 	  }
 
 	public String getName() {
 	  return name;
 	  }
 
-	  public int getValuesSize() {
-	  return values.size();
-	  }
-
-	  public int getParamsSize() {
-	  return params.size();
+	  public ArrayList<String> getParams() {
+	  return params;
 	  }
 
 	 public String getParam(Token token) {
@@ -135,7 +130,9 @@ public class Robot
 	   }
 
 	  public void run() {
-		System.out.println("Leyendo");
+	    for (Instruction instruction: instructions) {
+		instruction.runFunction(info);
+		  }
 	   }
 	 }
 
@@ -149,13 +146,20 @@ public class Robot
 	 public void  run() {
 		for (Instruction instruction: instructions) {
 		instruction.run();
-		  }
+		 }
+	 }
+
+	 public void runFunction(HashMap<String, String> info) {
+		for (Instruction instruction: instructions) {
+		instruction.runFunction(info);
+		 }
 	 }
 	 
 	 }
 
 	abstract class Instruction {
 	abstract void run();
+	abstract void runFunction(HashMap<String, String> info);
 	}
 
 	class Command  extends Instruction {
@@ -180,7 +184,6 @@ public class Robot
 			this.com = com.image.toLowerCase();
 		}
 		
-		@Override
 		public void run(){
 			switch(com) {
 			 case "assignto":
@@ -216,37 +219,68 @@ public class Robot
 				break;
 			}
 		}
+
+		public void runFunction(HashMap<String, String> info) {
+		  if (info.containsKey(var1)) {
+			var1 = (String) info.get(var1);
+		    } else if  (variables.containsKey(var1)) {
+			var1 = (String) variables.get(var1);
+		    }
+		  if (info.containsKey(var2)) {
+			var2 = (String) info.get(var2);
+		    } else if  (variables.containsKey(var2)) {
+			var2 = (String) variables.get(var2);
+		    }
+		   run();
+		}
 	}
 
 	class ProcedureCall extends Instruction {
 	  	private Token name;
 		private Function function;
+		private ArrayList<String> params;
+		private ArrayList<String> values = new ArrayList<String>();
 	  
 	  	public ProcedureCall(Token name) {
 		this.name = name;
 		this.function = Robot.getFunction(name);
+		this.params = function.getParams();
 	  	 }
 
 	  	public void addValue(Token name) {
-		function.addValue(token);
+		String image = token.image.toLowerCase();
+        values.add(image);
 	  	 }
 	  	 
-		@Override
 		public void run(){
-		int valuesSize = function.getValuesSize();
-		int paramsSize = function.getParamsSize();
+		int valuesSize = values.size();
+		int paramsSize = params.size();
 		if (valuesSize == paramsSize) {
+		  for(int i = 0; i < valuesSize; i++) {
+			function.addInfo((String) params.get(i), (String) values.get(i));
+		    }
 	  		function.run();
 		  } else {
 			throw new Error("The procedure" + name.image.toLowerCase() + "must have " + paramsSize + " params, not " + valuesSize + "\nLine: " + name.beginLine + " Column: " + name.beginColumn);
 		    }
+		}
+
+		public void runFunction(HashMap<String, String> info) {
+		  for (String value: values) {
+			if (info.containsKey(value)) {
+			value = (String) info.get(value);
+		    } else if  (variables.containsKey(value)) {
+			value = (String) variables.get(value);
+		    }
+		    }
+		   run();
 		}
 	}
 
 	class ControlStructure extends Instruction {
 		private String str;
 		private Condition con;
-		private int var;
+		private String var;
 		private Block block1;
 		private Block block2;
 
@@ -265,11 +299,10 @@ public class Robot
 
 		public ControlStructure(Token str, Token var, Block block1){
 			this.str = str.image.toLowerCase();
-			this.var = Integer.parseInt(var.image.toLowerCase());
+			this.var = var.image.toLowerCase();
 			this.block1 = block1;
 		}
 
-		@Override
 		public void run() {
 		  switch (str) {
 		    case "if":
@@ -279,7 +312,26 @@ public class Robot
 			  	while(con.run()) { block1.run();}
 				break;
 			case "repeat":
-				for (int i = 0;  i < var;  i++) {block1.run();}
+				for (int i = 0;  i < Integer.parseInt(var);  i++) {block1.run();}
+				break;			
+		    }
+		}
+
+		public void runFunction(HashMap<String, String> info) {
+		  switch (str) {
+		    case "if":
+				if (con.runFunction(info)) {block1.runFunction(info);} else {block2.runFunction(info);}
+				break;
+			case "while":
+			  	while(con.runFunction(info)) { block1.runFunction(info);}
+				break;
+			case "repeat":
+				if (info.containsKey(var)) {
+				var = (String) info.get(var);
+			    } else if  (variables.containsKey(var)) {
+				var = (String) variables.get(var);
+			    }
+				for (int i = 0;  i < Integer.parseInt(var);  i++) {block1.runFunction(info);}
 				break;			
 		    }
 		}
@@ -342,7 +394,22 @@ public class Robot
 				r = !subcondition.run();
 				break;
 			default: r = false; 
-		} return r; }
+		} return r;
+		}
+
+		public boolean runFunction(HashMap<String, String> info) {
+		  if (info.containsKey(var1)) {
+			var1 = (String) info.get(var1);
+		    } else if  (variables.containsKey(var1)) {
+			var1 = (String) variables.get(var1);
+		    }
+		  if (info.containsKey(var2)) {
+			var2 = (String) info.get(var2);
+		    } else if  (variables.containsKey(var2)) {
+			var2 = (String) variables.get(var2);
+		    }
+		   return run();
+		}
 	}
 }
 
