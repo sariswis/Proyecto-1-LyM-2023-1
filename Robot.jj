@@ -81,7 +81,7 @@ public class Robot
 		if (functions.containsKey(image)){
 			return (Function) functions.get(image);
 		} else {
-			throw new Error("The function " + image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+			throw new Error("The procedure " + image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
 	}
 
@@ -200,7 +200,7 @@ public class Robot
 				break;
 			case "put":
 				x = Integer.parseInt(var1);
-				if (var2 == "chips"){
+				if (var2.equals("chips")){
 					world.putChips(x);
 				} else {
 					world.putBalloons(x);
@@ -208,7 +208,7 @@ public class Robot
 				break;
 			case "pick":
 				x = Integer.parseInt(var1);
-				if (var2 == "chips"){
+				if (var2.equals("chips")){
 					world.pickChips(x);
 				} else {
 					world.grabBalloons(x);
@@ -238,7 +238,7 @@ public class Robot
 		if (valuesSize == paramsSize) {
 	  		function.run();
 		  } else {
-			throw new Error("The function" + name.image.toLowerCase() + "must have " + paramsSize + " params, not " + valuesSize + "\nLine: " + name.beginLine + " Column: " + name.beginColumn);
+			throw new Error("The procedure" + name.image.toLowerCase() + "must have " + paramsSize + " params, not " + valuesSize + "\nLine: " + name.beginLine + " Column: " + name.beginColumn);
 		    }
 		}
 	}
@@ -271,21 +271,17 @@ public class Robot
 
 		@Override
 		public void run() {
-			if (str == "if") {
-			  if (con.run()) {
-			  block1.run();
-			  } else {
-				block2.run();
-			  }
-			} else if (str == "while") { 
-			  while(con.run()) {
-			    block1.run();
-			    }
-			} else if (str == "repeat"){
-				for (int i = 0;  i < var;  i++) {
-				block1.run();
-				 }
-			 }
+		  switch (str) {
+		    case "if":
+				if (con.run()) {block1.run();} else {block2.run();}
+				break;
+			case "while":
+			  	while(con.run()) { block1.run();}
+				break;
+			case "repeat":
+				for (int i = 0;  i < var;  i++) {block1.run();}
+				break;			
+		    }
 		}
 	}
 	
@@ -316,11 +312,11 @@ public class Robot
 			boolean r = false;
 			switch(con) {
 			case "facing":
-				if (var1 == "north"){
+				if (var1.equals("north")){
 					r = world.facingNorth();
-				} else if (var1 == "south"){
+				} else if (var1.equals("south")){
 					r = world.facingSouth();
-				} else if (var1 == "east"){
+				} else if (var1.equals("east")){
 					r = world.facingEast();
 				} else {
 					r = world.facingWest();
@@ -328,24 +324,24 @@ public class Robot
 				break;
 			case "canput":
 				x = Integer.parseInt(var1);
-				if (var2 == "chips" && x < 2){
+				if (var2.equals("chips") && x < 2){
 					r = !world.chipExists();
-				} else if (var2 == "balloons"){
+				} else if (var2.equals("balloons")){
 					r = !world.containsBallons();
 				}
 				break;
 			case "canpick":
 				x = Integer.parseInt(var1);
-				if (var2 == "chips" && x < 2){
+				if (var2.equals("chips") && x < 2){
 					r = world.chipExists();
-				} else if (var2 == "balloons"){
+				} else if (var2.equals("balloons")){
 					r = world.countBalloons() >= x;
 				}
 				break;
 			case "not":
 				r = !subcondition.run();
 				break;
-			default: r = false;
+			default: r = false; 
 		} return r; }
 	}
 }
