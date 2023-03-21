@@ -183,13 +183,85 @@ public class Robot
 		}
 
 		public void run() {
-		verify();
-		execute();
+		switch(com) {
+			 case "assignto":
+			 	assignVariable(var1, var2);
+				break;
+			case "goto":
+				verify();
+				x = number(var1);
+				y = number(var2);
+				if (!world.isBlocked(new Point(x, y))) {
+				  world.setPostion(x, y);
+				} else {
+				System.out.println("Cannot move to " + x + ", " + y);
+				}
+				break;
+			case "move":
+				verify();
+				x = number(var1);
+				world.moveForward(x, false);
+				break;
+			case "put":
+				verify();
+				x = number(var1);
+				if (var2.equals("chips")){
+					world.putChips(x);
+				} else {
+					world.putBalloons(x);
+				}
+				break;
+			case "pick":
+				verify();
+				x = number(var1);
+				if (var2.equals("chips")){
+					world.pickChips(x);
+				} else {
+					world.grabBalloons(x);
+				}
+				break;
+			}
 		}
 
 		public void runFunction(HashMap<String, String> info) {
-		verifyF(info);
-		execute();
+		switch(com) {
+			 case "assignto":
+			 	assignVariable(var1, var2);
+				break;
+			case "goto":
+				verifyF(info);
+				x = number(var1);
+				y = number(var2);
+				if (!world.isBlocked(new Point(x, y))) {
+				  world.setPostion(x, y);
+				} else {
+				System.out.println("Cannot move to " + x + ", " + y);
+				}
+				break;
+			case "move":
+				verifyF(info);
+				x = number(var1);
+				world.moveForward(x, false);
+				break;
+			case "put":
+				verifyF(info);
+				x = number(var1);
+				if (var2.equals("chips")){
+					world.putChips(x);
+				} else {
+					world.putBalloons(x);
+				}
+				break;
+			case "pick":
+				verifyF(info);
+				x = number(var1);
+				if (var2.equals("chips")){
+					world.pickChips(x);
+				} else {
+					world.grabBalloons(x);
+				}
+				break;
+			}
 		}
 
 		public void verify() {
@@ -214,44 +286,6 @@ public class Robot
 			var2 = (String) variables.get(var2);
 		    }
 		}
-		
-		public void execute(){
-			switch(com) {
-			 case "assignto":
-			 	assignVariable(var1, var2);
-				break;
-			case "goto":
-				x = number(var1);
-				y = number(var2);
-				if (!world.isBlocked(new Point(x, y))) {
-				  world.setPostion(x, y);
-				} else {
-				System.out.println("Cannot move to " + x + ", " + y);
-				}
-				break;
-			case "move":
-				x = number(var1);
-				world.moveForward(x, false);
-				break;
-			case "put":
-				x = number(var1);
-				if (var2.equals("chips")){
-					world.putChips(x);
-				} else {
-					world.putBalloons(x);
-				}
-				break;
-			case "pick":
-				x = number(var1);
-				if (var2.equals("chips")){
-					world.pickChips(x);
-				} else {
-					world.grabBalloons(x);
-				}
-				break;
-			}
-		}
-
 	}
 
 	class ProcedureCall extends Instruction {
@@ -635,7 +669,7 @@ Instruction instruction(Token nameFunction) : {Instruction ins;} {
 
 Command commands(Token nameFunction) : {Token com; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
-	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> {return new Command(com, var1, var2) ;}
+	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> {Robot.checkVariable(var2, nameFunction); return new Command(com, var1, var2) ;}
 	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariable(var2, nameFunction);}) {return new Command(com, var1, var2) ;}
 	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariable(var1, nameFunction);}) {return new Command(com, var1) ;}
 	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>) {return new Command(com, var1) ;}
@@ -698,7 +732,7 @@ Instruction instructionF() : {Instruction ins;} {
 
 Command commandsF() : {Token com; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
-	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> { return new Command(com, var1, var2) ;}
+	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> {Robot.checkVariableF(var2); return new Command(com, var1, var2) ;}
 	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariableF(var2);}) {return new Command(com, var1, var2) ;}
 	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) {return new Command(com, var1) ;}
 	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>) {return new Command(com, var1) ;}
