@@ -253,7 +253,7 @@ public class Robot
 				if (!world.isBlocked(new Point(x, y))) {
 				  world.setPostion(x, y);
 				} else {
-				System.out.println("Cannot move to " + x + ", " + y);
+				throw new Error("Cannot move to " + x + ", " + y + " because that position is blocked");
 				}
 				break;
 			case "move":
@@ -460,6 +460,7 @@ public class Robot
 		private String var2;
 		private Condition subcondition;
 		private int x;
+		private Point point;
 
 		public Condition(Token con, Token var1, Token var2){
 			this.con = con.image.toLowerCase();
@@ -510,10 +511,69 @@ public class Robot
 				}
 				break;
 			case "canmoveindir":
-				r = false;
+				r = true;
+				x = number(var1);
+				point = world.getPosition();
+				if (var2.equals("north")){
+				  for(int i = 0; i < x; i++) {
+				  point.translate(0, -1);
+				  if (r == true) { r = !world.isBlocked(point); }
+				   }
+				  for(int i = 0; i < x; i++) {
+				  point.translate(0, 1);
+				   }
+				  
+				} else if (var2.equals("south")){
+				  for(int i = 0; i < x; i++) {
+				  point.translate(0, 1);
+				  if (r == true) { r = !world.isBlocked(point); }
+				   }
+				  for(int i = 0; i < x; i++) {
+				  point.translate(0, -1);
+				   }
+				  
+				} else if (var2.equals("east")){
+				  for(int i = 0; i < x; i++) {
+				  point.translate(1, 0);
+				  if (r == true) { r = !world.isBlocked(point); }
+				   }
+				  for(int i = 0; i < x; i++) {
+				  point.translate(-1, 0);
+				   }
+				  
+				} else {
+				  for(int i = 0; i < x; i++) {
+				  point.translate(-1, 0);
+				  if (r == true) { r = !world.isBlocked(point); }
+				   }
+				  for(int i = 0; i < x; i++) {
+				  point.translate(1, 0);
+				   }
+				}
 				break;
 			case "canjumpindir":
-				r = false;
+				x = number(var1);
+				point = world.getPosition();
+				if (var2.equals("north")){
+				  point.translate(0, -x);
+				  r = !world.isBlocked(point);
+				  point.translate(0, x);
+				  
+				} else if (var2.equals("south")){
+				  point.translate(0, x);
+				  r = !world.isBlocked(point);
+				  point.translate(0, -x);
+				  
+				} else if (var2.equals("east")){
+				  point.translate(x, 0);
+				  r = !world.isBlocked(point);
+				  point.translate(-x, 0);
+				  
+				} else {
+				  point.translate(-x, 0);
+				  r = !world.isBlocked(point);
+				  point.translate(x, 0);
+				}
 				break;
 			case "canmovetothe":
 				r = false;
@@ -524,7 +584,6 @@ public class Robot
 			case "not":
 				r = !subcondition.run();
 				break;
-			default: r = false; 
 		} return r;
 		}
 
@@ -561,10 +620,69 @@ public class Robot
 				}
 				break;
 			case "canmoveindir":
-				r = false;
+				r = true;
+				x = number(var1);
+				point = world.getPosition();
+				if (var2.equals("north")){
+				  for(int i = 0; i < x; i++) {
+				  point.translate(0, -1);
+				  if (r == true) { r = !world.isBlocked(point); }
+				   }
+				  for(int i = 0; i < x; i++) {
+				  point.translate(0, 1);
+				   }
+				  
+				} else if (var2.equals("south")){
+				  for(int i = 0; i < x; i++) {
+				  point.translate(0, 1);
+				  if (r == true) { r = !world.isBlocked(point); }
+				   }
+				  for(int i = 0; i < x; i++) {
+				  point.translate(0, -1);
+				   }
+				  
+				} else if (var2.equals("east")){
+				  for(int i = 0; i < x; i++) {
+				  point.translate(1, 0);
+				  if (r == true) { r = !world.isBlocked(point); }
+				   }
+				  for(int i = 0; i < x; i++) {
+				  point.translate(-1, 0);
+				   }
+				  
+				} else {
+				  for(int i = 0; i < x; i++) {
+				  point.translate(-1, 0);
+				  if (r == true) { r = !world.isBlocked(point); }
+				   }
+				  for(int i = 0; i < x; i++) {
+				  point.translate(1, 0);
+				   }
+				}
 				break;
 			case "canjumpindir":
-				r = false;
+				x = number(var1);
+				point = world.getPosition();
+				if (var2.equals("north")){
+				  point.translate(0, -x);
+				  r = !world.isBlocked(point);
+				  point.translate(0, x);
+				  
+				} else if (var2.equals("south")){
+				  point.translate(0, x);
+				  r = !world.isBlocked(point);
+				  point.translate(0, -x);
+				  
+				} else if (var2.equals("east")){
+				  point.translate(x, 0);
+				  r = !world.isBlocked(point);
+				  point.translate(-x, 0);
+				  
+				} else {
+				  point.translate(-x, 0);
+				  r = !world.isBlocked(point);
+				  point.translate(x, 0);
+				}
 				break;
 			case "canmovetothe":
 				r = false;
@@ -575,7 +693,6 @@ public class Robot
 			case "not":
 				r = !subcondition.runFunction(info);
 				break;
-			default: r = false; 
 		} return r;
 		}
 
