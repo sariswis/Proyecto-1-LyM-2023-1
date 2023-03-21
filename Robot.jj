@@ -59,17 +59,9 @@ public class Robot
 		}
 	}
 
-	public static Token getVariableF(Token token){
+	public static void checkVariableF(Token token){
 	  String image = token.image.toLowerCase();
-	  int kind = token.kind;
-		if (variables.containsKey(image)){
-			String value = (String)  variables.get(image);
-			if (value != null) {
-			return new Token(kind, value);
-			  } else {
-			throw new Error("The variable " + image + " has no value\nLine: " + token.beginLine + " Column: " + token.beginColumn);
-			  }
-		} else {
+		if (!variables.containsKey(image)){
 		throw new Error("The variable " + image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
 	}
@@ -189,8 +181,41 @@ public class Robot
 		public Command(Token com){
 			this.com = com.image.toLowerCase();
 		}
+
+		public void run() {
+		verify();
+		execute();
+		}
+
+		public void runFunction(HashMap<String, String> info) {
+		verifyF(info);
+		execute();
+		}
+
+		public void verify() {
+			if  (variables.containsKey(var1) && variables.get(var1) != null) {
+			var1 = (String) variables.get(var1);
+		    }
+			if  (variables.containsKey(var2) && variables.get(var2) != null) {
+			var2 = (String) variables.get(var2);
+		    }
+		}
+
+		public void verifyF(HashMap<String, String> info) {
+			if (info.containsKey(var1) && info.get(var1) != null) {
+			var1 = (String) info.get(var1);
+		    } else if  (variables.containsKey(var1) && variables.get(var1) != null) {
+			var1 = (String) variables.get(var1);
+		    }
+		    
+		  if (info.containsKey(var2) && info.get(var2) != null) {
+			var2 = (String) info.get(var2);
+		    } else if  (variables.containsKey(var2) && variables.get(var2) != null) {
+			var2 = (String) variables.get(var2);
+		    }
+		}
 		
-		public void run(){
+		public void execute(){
 			switch(com) {
 			 case "assignto":
 			 	assignVariable(var1, var2);
@@ -227,19 +252,6 @@ public class Robot
 			}
 		}
 
-		public void runFunction(HashMap<String, String> info) {
-		  if (info.containsKey(var1) && info.get(var1) != null) {
-			var1 = (String) info.get(var1);
-		    } else if  (variables.containsKey(var1) && variables.get(var1) != null) {
-			var1 = (String) variables.get(var1);
-		    }
-		  if (info.containsKey(var2) && info.get(var2) != null) {
-			var2 = (String) info.get(var2);
-		    } else if  (variables.containsKey(var2) && variables.get(var2) != null) {
-			var2 = (String) variables.get(var2);
-		    }
-		   run();
-		}
 	}
 
 	class ProcedureCall extends Instruction {
@@ -259,7 +271,35 @@ public class Robot
         values.add(image);
 	  	 }
 	  	 
-		public void run(){
+		public void run() {
+		   verify();
+		   execute();
+		}
+
+		public void runFunction(HashMap<String, String> info) {
+		   verifyF(info);
+		   execute();
+		}
+
+		 public void verify() {
+			for (String value: values) {
+			if  (variables.containsKey(value) && variables.get(value) != null) {
+			value = (String) variables.get(value);
+		    }
+		    }
+		 }
+
+		 public void verifyF(HashMap<String, String> info) {
+			for (String value: values) {
+			if (info.containsKey(value) && info.get(value) != null) {
+			value = (String) info.get(value);
+		    } else if  (variables.containsKey(value) && variables.get(value) != null) {
+			value = (String) variables.get(value);
+		    }
+		    }
+		 }
+
+		public void execute(){
 		int valuesSize = values.size();
 		int paramsSize = params.size();
 		if (valuesSize == paramsSize) {
@@ -270,17 +310,6 @@ public class Robot
 		  } else {
 			throw new Error("The procedure" + name.image.toLowerCase() + "must have " + paramsSize + " params, not " + valuesSize + "\nLine: " + name.beginLine + " Column: " + name.beginColumn);
 		    }
-		}
-
-		public void runFunction(HashMap<String, String> info) {
-		  for (String value: values) {
-			if (info.containsKey(value) && info.get(value) != null) {
-			value = (String) info.get(value);
-		    } else if  (variables.containsKey(value) && variables.get(value) != null) {
-			value = (String) variables.get(value);
-		    }
-		    }
-		   run();
 		}
 	}
 
@@ -319,6 +348,7 @@ public class Robot
 			  	while(con.run()) { block1.run();}
 				break;
 			case "repeat":
+				verify();
 				for (int i = 0;  i < number(var);  i++) {block1.run();}
 				break;			
 		    }
@@ -333,14 +363,24 @@ public class Robot
 			  	while(con.runFunction(info)) { block1.runFunction(info);}
 				break;
 			case "repeat":
-				if (info.containsKey(var) && info.get(var) != null) {
-				var = (String) info.get(var);
-			    } else if  (variables.containsKey(var) && variables.get(var) != null) {
-				var = (String) variables.get(var);
-			    }
+				verifyF(info);
 				for (int i = 0;  i < number(var);  i++) {block1.runFunction(info);}
 				break;			
 		    }
+		}
+
+		public void verify() {
+			if  (variables.containsKey(var) && variables.get(var) != null) {
+			var = (String) variables.get(var);
+		    }
+		}
+
+		public void verifyF(HashMap<String, String> info) {
+		  	if (info.containsKey(var) && info.get(var) != null) {
+			var = (String) info.get(var);
+			} else if  (variables.containsKey(var) && variables.get(var) != null) {
+			var = (String) variables.get(var);
+			}
 		}
 	}
 	
@@ -368,6 +408,8 @@ public class Robot
 		}
 
 		public boolean run(){
+		  	verify();
+		  	
 			boolean r = false;
 			switch(con) {
 			case "facing":
@@ -405,17 +447,8 @@ public class Robot
 		}
 
 		public boolean runFunction(HashMap<String, String> info) {
-		  if (info.containsKey(var1) && info.get(var1) != null) {
-			var1 = (String) info.get(var1);
-		    } else if  (variables.containsKey(var1) && variables.get(var1) != null) {
-			var1 = (String) variables.get(var1);
-		    }
-		  if (info.containsKey(var2) && info.get(var2) != null) {
-			var2 = (String) info.get(var2);
-		    } else if  (variables.containsKey(var2) && variables.get(var2) != null) {
-			var2 = (String) variables.get(var2);
-		    }
-
+			verifyF(info);
+			
 		   	boolean r = false;
 			switch(con) {
 			case "facing":
@@ -450,6 +483,28 @@ public class Robot
 				break;
 			default: r = false; 
 		} return r;
+		}
+
+		public void verify() {
+			if  (variables.containsKey(var1) && variables.get(var1) != null) {
+			var1 = (String) variables.get(var1);
+		    }
+			if  (variables.containsKey(var2) && variables.get(var2) != null) {
+			var2 = (String) variables.get(var2);
+		    }
+		}
+
+		public void verifyF(HashMap<String, String> info) {
+			if (info.containsKey(var1) && info.get(var1) != null) {
+			var1 = (String) info.get(var1);
+		    } else if  (variables.containsKey(var1) && variables.get(var1) != null) {
+			var1 = (String) variables.get(var1);
+		    }
+		  	if (info.containsKey(var2) && info.get(var2) != null) {
+			var2 = (String) info.get(var2);
+		    } else if  (variables.containsKey(var2) && variables.get(var2) != null) {
+			var2 = (String) variables.get(var2);
+		    }
 		}
 	}
 }
@@ -644,20 +699,20 @@ Instruction instructionF() : {Instruction ins;} {
 Command commandsF() : {Token com; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
 	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> { return new Command(com, var1, var2) ;}
-	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {var2 = Robot.getVariableF(var2);}) {return new Command(com, var1, var2) ;}
-	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) {return new Command(com, var1) ;}
+	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {Robot.checkVariableF(var2);}) {return new Command(com, var1, var2) ;}
+	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) {return new Command(com, var1) ;}
 	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>) {return new Command(com, var1) ;}
 	| com = <face> <COLON> var1 = <ORIENTATION> {return new Command(com, var1) ;}
-	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
-	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
-	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
+	| (com = <put> | com = <pick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Command(com, var1, var2) ;}
+	| (com = <moveToThe> | com = <jumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Command(com, var1, var2) ;}
+	| (com = <moveInDir> | com = <jumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Command(com, var1, var2) ;}
 	| com = <nop> <COLON> {return new Command(com) ;}
 }
 
 ProcedureCall procedureCallF() : {Token name; Token var; ProcedureCall call;} {
 	name = <NAME> <COLON> { call = new ProcedureCall(name);}
-	((var = <NUMBER> | var = <NAME> {var = Robot.getVariableF(var);}) { call.addValue(var);}
-	(<COMMA> (var = <NUMBER> | var = <NAME> {var = Robot.getVariableF(var);}) { call.addValue(var);})*)?
+	((var = <NUMBER> | var = <NAME> {Robot.checkVariableF(var);}) { call.addValue(var);}
+	(<COMMA> (var = <NUMBER> | var = <NAME> {Robot.checkVariableF(var);}) { call.addValue(var);})*)?
 	{ return call;}
 }
 
@@ -665,15 +720,15 @@ ControlStructure controlStructureF() : {Token str; Token var; Condition con; Blo
   //En Discord se dijo que Si no se exigen corchetes en un bloque, es porque es una sola instrucción
 	str = <IF> <COLON> con = conditionF() <THEN> <COLON> (block1 = blockInstructionsF() | block1 = oneInstructionF()) <ELSE> <COLON> (block2 = blockInstructionsF() | block2 = oneInstructionF()) { return new ControlStructure(str, con, block1, block2); }
 	| str = <WHILE> <COLON> con = conditionF() <DO> <COLON> (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, con, block1); }
-	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {var = Robot.getVariableF(var);}) (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, var, block1); }
+	| str = <REPEAT> <COLON> (var = <NUMBER> | var = <NAME> {Robot.checkVariableF(var);}) (block1 = blockInstructionsF() | block1 = oneInstructionF()) { return new ControlStructure(str, var, block1); }
 }
 
 Condition conditionF() : {Token con; Token var1; Token var2; Condition subcondition;} {
   	//toThe -> Direction, inDir -> Orientation
 	con = <facing> <COLON> var1 = <ORIENTATION> {return new Condition(con, var1);}
-	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
-	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
-	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
+	| (con = <canPut> | con = <canPick>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <X_OBJECT> {return new Condition(con, var1, var2);}
+	| (con = <canMoveInDir> | con = <canJumpInDir>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> var2 = <ORIENTATION> {return new Condition(con, var1, var2);}
+	| (con = <canMoveToThe> | con = <canJumpToThe>) <COLON> (var1 = <NUMBER> | var1 = <NAME> {Robot.checkVariableF(var1);}) <COMMA> (var2 = <LEFT> | var2 = <RIGHT> | var2 = <DIRECTION>) {return new Condition(con, var1, var2);}
 	| con = <not> <COLON> subcondition = conditionF() { return new Condition(con, subcondition); }
 }
 
