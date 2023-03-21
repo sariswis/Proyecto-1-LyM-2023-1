@@ -43,13 +43,11 @@ public class Robot
         functions.put(function.getName(), function);
 	}
 
-	public static void assignVariable(Token number, Token token){
-        String num = number.image.toLowerCase();
-        String image = token.image.toLowerCase();
-		if (variables.containsKey(image)){
-			variables.put(image, num);
+	public static void assignVariable(String number, String variable){
+		if (variables.containsKey(variable)){
+			variables.put(variable, number);
 		} else {
-			throw new Error("Couldn't assign " + number.image + " to undefined variable " + image + "\nLine: " + token.beginLine + " Column: " + token.beginColumn);
+			throw new Error("Couldn't assign " + number + " to undefined variable " + variable);
 		}
 	}
 
@@ -83,6 +81,14 @@ public class Robot
 		} else {
 			throw new Error("The procedure " + image + " is not defined\nLine: " + token.beginLine + " Column: " + token.beginColumn);
 		}
+	}
+
+	public static int number(String number) {
+	try {
+		return Integer.parseInt(number);
+	}  catch (NumberFormatException ee) {
+		throw new Error("Cannot convert " + number + " to a number");
+	}
 	}
 
 
@@ -187,22 +193,23 @@ public class Robot
 		public void run(){
 			switch(com) {
 			 case "assignto":
+			 	assignVariable(var1, var2);
 				break;
 			case "goto":
-				x = Integer.parseInt(var1);
-				y = Integer.parseInt(var2);
+				x = number(var1);
+				y = number(var2);
 				if (!world.isBlocked(new Point(x, y))) {
 				  world.setPostion(x, y);
 				} else {
-				System.out.println("Can't move to " + x + ", " + y);
+				System.out.println("Cannot move to " + x + ", " + y);
 				}
 				break;
 			case "move":
-				x = Integer.parseInt(var1);
+				x = number(var1);
 				world.moveForward(x, false);
 				break;
 			case "put":
-				x = Integer.parseInt(var1);
+				x = number(var1);
 				if (var2.equals("chips")){
 					world.putChips(x);
 				} else {
@@ -210,7 +217,7 @@ public class Robot
 				}
 				break;
 			case "pick":
-				x = Integer.parseInt(var1);
+				x = number(var1);
 				if (var2.equals("chips")){
 					world.pickChips(x);
 				} else {
@@ -221,14 +228,14 @@ public class Robot
 		}
 
 		public void runFunction(HashMap<String, String> info) {
-		  if (info.containsKey(var1)) {
+		  if (info.containsKey(var1) && info.get(var1) != null) {
 			var1 = (String) info.get(var1);
-		    } else if  (variables.containsKey(var1)) {
+		    } else if  (variables.containsKey(var1) && variables.get(var1) != null) {
 			var1 = (String) variables.get(var1);
 		    }
-		  if (info.containsKey(var2)) {
+		  if (info.containsKey(var2) && info.get(var2) != null) {
 			var2 = (String) info.get(var2);
-		    } else if  (variables.containsKey(var2)) {
+		    } else if  (variables.containsKey(var2) && variables.get(var2) != null) {
 			var2 = (String) variables.get(var2);
 		    }
 		   run();
@@ -267,9 +274,9 @@ public class Robot
 
 		public void runFunction(HashMap<String, String> info) {
 		  for (String value: values) {
-			if (info.containsKey(value)) {
+			if (info.containsKey(value) && info.get(value) != null) {
 			value = (String) info.get(value);
-		    } else if  (variables.containsKey(value)) {
+		    } else if  (variables.containsKey(value) && variables.get(value) != null) {
 			value = (String) variables.get(value);
 		    }
 		    }
@@ -312,7 +319,7 @@ public class Robot
 			  	while(con.run()) { block1.run();}
 				break;
 			case "repeat":
-				for (int i = 0;  i < Integer.parseInt(var);  i++) {block1.run();}
+				for (int i = 0;  i < number(var);  i++) {block1.run();}
 				break;			
 		    }
 		}
@@ -326,12 +333,12 @@ public class Robot
 			  	while(con.runFunction(info)) { block1.runFunction(info);}
 				break;
 			case "repeat":
-				if (info.containsKey(var)) {
+				if (info.containsKey(var) && info.get(var) != null) {
 				var = (String) info.get(var);
-			    } else if  (variables.containsKey(var)) {
+			    } else if  (variables.containsKey(var) && variables.get(var) != null) {
 				var = (String) variables.get(var);
 			    }
-				for (int i = 0;  i < Integer.parseInt(var);  i++) {block1.runFunction(info);}
+				for (int i = 0;  i < number(var);  i++) {block1.runFunction(info);}
 				break;			
 		    }
 		}
@@ -375,7 +382,7 @@ public class Robot
 				}
 				break;
 			case "canput":
-				x = Integer.parseInt(var1);
+				x = number(var1);
 				if (var2.equals("chips") && x < 2){
 					r = !world.chipExists();
 				} else if (var2.equals("balloons")){
@@ -383,7 +390,7 @@ public class Robot
 				}
 				break;
 			case "canpick":
-				x = Integer.parseInt(var1);
+				x = number(var1);
 				if (var2.equals("chips") && x < 2){
 					r = world.chipExists();
 				} else if (var2.equals("balloons")){
@@ -398,14 +405,14 @@ public class Robot
 		}
 
 		public boolean runFunction(HashMap<String, String> info) {
-		  if (info.containsKey(var1)) {
+		  if (info.containsKey(var1) && info.get(var1) != null) {
 			var1 = (String) info.get(var1);
-		    } else if  (variables.containsKey(var1)) {
+		    } else if  (variables.containsKey(var1) && variables.get(var1) != null) {
 			var1 = (String) variables.get(var1);
 		    }
-		  if (info.containsKey(var2)) {
+		  if (info.containsKey(var2) && info.get(var2) != null) {
 			var2 = (String) info.get(var2);
-		    } else if  (variables.containsKey(var2)) {
+		    } else if  (variables.containsKey(var2) && variables.get(var2) != null) {
 			var2 = (String) variables.get(var2);
 		    }
 
@@ -423,7 +430,7 @@ public class Robot
 				}
 				break;
 			case "canput":
-				x = Integer.parseInt(var1);
+				x = number(var1);
 				if (var2.equals("chips") && x < 2){
 					r = !world.chipExists();
 				} else if (var2.equals("balloons")){
@@ -431,7 +438,7 @@ public class Robot
 				}
 				break;
 			case "canpick":
-				x = Integer.parseInt(var1);
+				x = number(var1);
 				if (var2.equals("chips") && x < 2){
 					r = world.chipExists();
 				} else if (var2.equals("balloons")){
@@ -636,7 +643,7 @@ Instruction instructionF() : {Instruction ins;} {
 
 Command commandsF() : {Token com; Token var1; Token var2;} {
   	//toThe -> Direction, inDir -> Orientation
-	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> { var2 = Robot.getVariableF(var2); return new Command(com, var1, var2) ;}
+	com = <assignTo> <COLON> var1 = <NUMBER> <COMMA> var2 = <NAME> { return new Command(com, var1, var2) ;}
 	| com = <goTo> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) <COMMA> (var2 = <NUMBER> | var2 = <NAME> {var2 = Robot.getVariableF(var2);}) {return new Command(com, var1, var2) ;}
 	| com = <move> <COLON> (var1 = <NUMBER> | var1 = <NAME> {var1 = Robot.getVariableF(var1);}) {return new Command(com, var1) ;}
 	| com = <turn> <COLON> (var1 = <LEFT> | var1 = <RIGHT> | var1 = <AROUND>) {return new Command(com, var1) ;}
