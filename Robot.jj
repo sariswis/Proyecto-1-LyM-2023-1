@@ -194,13 +194,19 @@ public class Robot
 				if (!world.isBlocked(new Point(x, y))) {
 				  world.setPostion(x, y);
 				} else {
-				System.out.println("Cannot move to " + x + ", " + y);
+				throw new Error("Cannot move to " + x + ", " + y + " because that position is blocked");
 				}
 				break;
 			case "move":
 				verify();
 				x = number(var1);
 				world.moveForward(x, false);
+				break;
+			case "turn":
+				verify();
+				break;
+			case "face":
+				verify();
 				break;
 			case "put":
 				verify();
@@ -220,6 +226,18 @@ public class Robot
 					world.grabBalloons(x);
 				}
 				break;
+			case "movetothe":
+				verify();
+				break;
+			case "moveindir":
+				verify();
+				break;
+			case "jumptothe":
+				verify();
+				break;
+			case "jumpindir":
+				verify();
+				break;											
 			}
 		}
 
@@ -243,6 +261,12 @@ public class Robot
 				x = number(var1);
 				world.moveForward(x, false);
 				break;
+			case "turn":
+				verifyF(info);
+				break;
+			case "face":
+				verifyF(info);
+				break;				
 			case "put":
 				verifyF(info);
 				x = number(var1);
@@ -261,6 +285,18 @@ public class Robot
 					world.grabBalloons(x);
 				}
 				break;
+			case "movetothe":
+				verifyF(info);
+				break;
+			case "moveindir":
+				verifyF(info);
+				break;
+			case "jumptothe":
+				verifyF(info);
+				break;
+			case "jumpindir":
+				verifyF(info);
+				break;						
 			}
 		}
 
@@ -342,7 +378,7 @@ public class Robot
 		    }
 	  		function.run();
 		  } else {
-			throw new Error("The procedure" + name.image.toLowerCase() + "must have " + paramsSize + " params, not " + valuesSize + "\nLine: " + name.beginLine + " Column: " + name.beginColumn);
+			throw new Error("The procedure " + name.image.toLowerCase() + " must have " + paramsSize + " params, not " + valuesSize + "\nLine: " + name.beginLine + " Column: " + name.beginColumn);
 		    }
 		}
 	}
@@ -473,6 +509,18 @@ public class Robot
 					r = world.countBalloons() >= x;
 				}
 				break;
+			case "canmoveindir":
+				r = false;
+				break;
+			case "canjumpindir":
+				r = false;
+				break;
+			case "canmovetothe":
+				r = false;
+				break;
+			case "canjumptothe":
+				r = false;
+				break;								
 			case "not":
 				r = !subcondition.run();
 				break;
@@ -512,6 +560,18 @@ public class Robot
 					r = world.countBalloons() >= x;
 				}
 				break;
+			case "canmoveindir":
+				r = false;
+				break;
+			case "canjumpindir":
+				r = false;
+				break;
+			case "canmovetothe":
+				r = false;
+				break;
+			case "canjumptothe":
+				r = false;
+				break;						
 			case "not":
 				r = !subcondition.runFunction(info);
 				break;
