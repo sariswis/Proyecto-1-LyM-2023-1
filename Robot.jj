@@ -461,6 +461,7 @@ public class Robot
 		private Condition subcondition;
 		private int x;
 		private Point point;
+		private boolean r = false;
 
 		public Condition(Token con, Token var1, Token var2){
 			this.con = con.image.toLowerCase();
@@ -478,39 +479,7 @@ public class Robot
 			this.subcondition = subcondition;
 		}
 
-		public boolean run(){
-		  	verify();
-		  	
-			boolean r = false;
-			switch(con) {
-			case "facing":
-				if (var1.equals("north")){
-					r = world.facingNorth();
-				} else if (var1.equals("south")){
-					r = world.facingSouth();
-				} else if (var1.equals("east")){
-					r = world.facingEast();
-				} else {
-					r = world.facingWest();
-				}
-				break;
-			case "canput":
-				x = number(var1);
-				if (var2.equals("chips") && x < 2){
-					r = !world.chipExists();
-				} else if (var2.equals("balloons")){
-					r = !world.containsBallons();
-				}
-				break;
-			case "canpick":
-				x = number(var1);
-				if (var2.equals("chips") && x < 2){
-					r = world.chipExists();
-				} else if (var2.equals("balloons")){
-					r = world.countBalloons() >= x;
-				}
-				break;
-			case "canmoveindir":
+		public boolean canMoveInDir() {
 				r = true;
 				x = number(var1);
 				point = world.getPosition();
@@ -550,9 +519,12 @@ public class Robot
 				  point.translate(1, 0);
 				   }
 				}
-				break;
-			case "canjumpindir":
-				x = number(var1);
+				return r;
+		  }
+
+		  public boolean canJumpInDir() {
+		    	r = true;
+		    	x = number(var1);
 				point = world.getPosition();
 				if (var2.equals("north")){
 				  point.translate(0, -x);
@@ -574,12 +546,103 @@ public class Robot
 				  r = !world.isBlocked(point);
 				  point.translate(x, 0);
 				}
+				return r;
+		    }
+
+		public String convertDirection(String direction) {
+		switch (direction) {
+		case  "front":
+			if (world.facingNorth()) {
+			direction = "north";
+			} else if (world.facingSouth()) {
+			direction = "south";
+			} else if (world.facingEast()) {
+			direction = "east";
+			} else {
+			direction = "west";
+			}
+			break;
+		case  "back":
+			if (world.facingNorth()) {
+			direction = "south";
+			} else if (world.facingSouth()) {
+			direction = "north";
+			} else if (world.facingEast()) {
+			direction = "west";
+			} else {
+			direction = "east";
+			}
+			break;
+		case  "right":
+			if (world.facingNorth()) {
+			direction = "east";
+			} else if (world.facingSouth()) {
+			direction = "west";
+			} else if (world.facingEast()) {
+			direction = "south";
+			} else {
+			direction = "north";
+			}
+			break;
+		case  "left":
+			if (world.facingNorth()) {
+			direction = "west";
+			} else if (world.facingSouth()) {
+			direction = "east";
+			} else if (world.facingEast()) {
+			direction = "north";
+			} else {
+			direction = "south";
+			}
+			break;										
+			}
+		return direction;
+		}
+
+		public boolean run(){
+		  	verify();
+
+			switch(con) {
+			case "facing":
+				if (var1.equals("north")){
+					r = world.facingNorth();
+				} else if (var1.equals("south")){
+					r = world.facingSouth();
+				} else if (var1.equals("east")){
+					r = world.facingEast();
+				} else {
+					r = world.facingWest();
+				}
+				break;
+			case "canput":
+				x = number(var1);
+				if (var2.equals("chips") && x < 2){
+					r = !world.chipExists();
+				} else if (var2.equals("balloons")){
+					r = !world.containsBallons();
+				}
+				break;
+			case "canpick":
+				x = number(var1);
+				if (var2.equals("chips") && x < 2){
+					r = world.chipExists();
+				} else if (var2.equals("balloons")){
+					r = world.countBalloons() >= x;
+				}
+				break;
+			case "canmoveindir":
+				r = canMoveInDir();
+				break;
+			case "canjumpindir":
+				r = canJumpInDir();
 				break;
 			case "canmovetothe":
-				r = false;
+				var2 = convertDirection(var2);
+				r = canMoveInDir();
 				break;
 			case "canjumptothe":
-				r = false;
+				var2 = convertDirection(var2);
+				r = canJumpInDir();
 				break;								
 			case "not":
 				r = !subcondition.run();
@@ -590,7 +653,6 @@ public class Robot
 		public boolean runFunction(HashMap<String, String> info) {
 			verifyF(info);
 			
-		   	boolean r = false;
 			switch(con) {
 			case "facing":
 				if (var1.equals("north")){
@@ -620,76 +682,19 @@ public class Robot
 				}
 				break;
 			case "canmoveindir":
-				r = true;
-				x = number(var1);
-				point = world.getPosition();
-				if (var2.equals("north")){
-				  for(int i = 0; i < x; i++) {
-				  point.translate(0, -1);
-				  if (r == true) { r = !world.isBlocked(point); }
-				   }
-				  for(int i = 0; i < x; i++) {
-				  point.translate(0, 1);
-				   }
-				  
-				} else if (var2.equals("south")){
-				  for(int i = 0; i < x; i++) {
-				  point.translate(0, 1);
-				  if (r == true) { r = !world.isBlocked(point); }
-				   }
-				  for(int i = 0; i < x; i++) {
-				  point.translate(0, -1);
-				   }
-				  
-				} else if (var2.equals("east")){
-				  for(int i = 0; i < x; i++) {
-				  point.translate(1, 0);
-				  if (r == true) { r = !world.isBlocked(point); }
-				   }
-				  for(int i = 0; i < x; i++) {
-				  point.translate(-1, 0);
-				   }
-				  
-				} else {
-				  for(int i = 0; i < x; i++) {
-				  point.translate(-1, 0);
-				  if (r == true) { r = !world.isBlocked(point); }
-				   }
-				  for(int i = 0; i < x; i++) {
-				  point.translate(1, 0);
-				   }
-				}
+				r = canMoveInDir();
 				break;
 			case "canjumpindir":
-				x = number(var1);
-				point = world.getPosition();
-				if (var2.equals("north")){
-				  point.translate(0, -x);
-				  r = !world.isBlocked(point);
-				  point.translate(0, x);
-				  
-				} else if (var2.equals("south")){
-				  point.translate(0, x);
-				  r = !world.isBlocked(point);
-				  point.translate(0, -x);
-				  
-				} else if (var2.equals("east")){
-				  point.translate(x, 0);
-				  r = !world.isBlocked(point);
-				  point.translate(-x, 0);
-				  
-				} else {
-				  point.translate(-x, 0);
-				  r = !world.isBlocked(point);
-				  point.translate(x, 0);
-				}
+				r = canJumpInDir();
 				break;
 			case "canmovetothe":
-				r = false;
+				var2 = convertDirection(var2);
+				r = canMoveInDir();
 				break;
 			case "canjumptothe":
-				r = false;
-				break;						
+				var2 = convertDirection(var2);
+				r = canJumpInDir();
+				break;					
 			case "not":
 				r = !subcondition.runFunction(info);
 				break;
