@@ -216,6 +216,8 @@ public class Robot
 		private String var2;
 		private int x;
 		private int y;
+		private int endOrientation;
+		private boolean r = true;
 		private HashMap<String, Integer> hm = new HashMap<String, Integer>() { {
 		put("north", 0) ; put("south",  1); put("east", 2); put("west", 3); 
 		  } };
@@ -235,9 +237,8 @@ public class Robot
 			this.com = com.image.toLowerCase();
 		}
 
-		public void face() {
+		public void face(int endOrientation) {
 	       int initialOrientation = world.getFacing();
-            int endOrientation = (Integer) hm.get(var1);
             int nOfRightTurns = numberOfRightTurns(initialOrientation, endOrientation);
             for(int i = 0; i < nOfRightTurns; i++) { 
                  world.turnRight();
@@ -266,7 +267,6 @@ public class Robot
 
         public void moveInDir() {
 			x = number(var1);
-			boolean r = true;
 			Point point = world.getPosition();
 			Point change = new Point(point);
 			if (var2.equals("north")){
@@ -301,6 +301,36 @@ public class Robot
         } else {
 			throw new Error("Cannot move to " + X + ", " + Y + " because there are obstacles");
         }
+      }
+
+        public void jumpInDir() {
+		    x = number(var1);
+			Point point = world.getPosition();
+			Point change = new Point(point);
+			if (var2.equals("north")){
+				change.translate(0, -x);
+				r = !world.isBlocked(change);
+				  
+			} else if (var2.equals("south")){
+				change.translate(0, x);
+				r = !world.isBlocked(change);
+				  
+			} else if (var2.equals("east")){
+				change.translate(x, 0);
+				r = !world.isBlocked(change);
+				  
+			} else {
+				change.translate(-x, 0);
+				r = !world.isBlocked(change);
+			}
+
+			int X = (int) change.getX();
+			int Y = (int) change.getY();
+			if (r) {
+			  world.setPostion(X, Y);
+	        } else {
+				throw new Error("Cannot jump to " + X + ", " + Y + " because that position is blocked");
+	        }
       }
 
 		public void run() {
@@ -338,7 +368,8 @@ public class Robot
 				break;
 			case "face":
 				verify();
-				face();
+				endOrientation = (Integer) hm.get(var1);
+				face(endOrientation);
 				break;
 			case "put":
 				verify();
@@ -366,15 +397,23 @@ public class Robot
 			case "moveindir":
 				verify();
 				moveInDir();
+				if (r) {
+					endOrientation = (Integer) hm.get(var2);
+					face(endOrientation);
+				}
 				break;
 			case "jumptothe":
 				verify();
 				var2 = convertDirection(var2);
-				//jumpInDir();
+				jumpInDir();
 				break;
 			case "jumpindir":
 				verify();
-				//jumpInDir();
+				jumpInDir();
+				if (r) {
+					endOrientation = (Integer) hm.get(var2);
+					face(endOrientation);
+				}
 				break;
 			}
 		}
@@ -414,7 +453,8 @@ public class Robot
 				break;
 			case "face":
 				verifyF(info);
-				face();
+				endOrientation = (Integer) hm.get(var1);
+				face(endOrientation);
 				break;
 			case "put":
 				verifyF(info);
@@ -441,16 +481,24 @@ public class Robot
 				break;
 			case "moveindir":
 				verifyF(info);
-				moveInDir();
+				moveInDir();		
+				if (r) {
+					endOrientation = (Integer) hm.get(var2);
+					face(endOrientation);
+				}
 				break;
 			case "jumptothe":
 				verifyF(info);
 				var2 = convertDirection(var2);
-				//jumpInDir();
+				jumpInDir();
 				break;
 			case "jumpindir":
 				verifyF(info);
-				//jumpInDir();
+				jumpInDir();			
+				if (r) {
+					endOrientation = (Integer) hm.get(var2);
+					face(endOrientation);
+				}
 				break;
 			}
 		}
@@ -927,12 +975,12 @@ void procedureDef() : {Token nameFunction; Token var; Function function; Instruc
 	nameFunction = <NAME> { function = new Function(nameFunction);}
 	<O_BRACKET>
 	<V_BAR> 
-	(var = <NAME> {function.addParam(var);} (<COMMA> var = <NAME> {function.addParam(var);})*)* 
+	(var = <NAME> {function.addParam(var);} (<COMMA> var = <NAME> {function.addParam(var);})*)? 
 	<V_BAR>
 	{Robot.addFunction(function);} 
 	ins = instruction(nameFunction) {function.addInstruction(ins);} (<SEMICOLON> ins = instruction(nameFunction) {function.addInstruction(ins);})*
 	<C_BRACKET>
-	{Robot.addFunction(function);} 
+	{Robot.addFunction(function);}
 }
 
 Instruction instruction(Token nameFunction) : {Instruction ins;} {
