@@ -25,7 +25,7 @@ public class Robot
 	private RobotWorldDec world;
 	public String salida = new String();
 
-	private static HashMap<String, String> variables = new HashMap<>();
+	private static HashMap<String, String> variables = new HashMap<String, String>();
 	private static HashMap<String, Function> functions = new HashMap<String, Function>();
 
 	/* Robot Methods */
@@ -160,13 +160,15 @@ public class Robot
 	abstract void runFunction(HashMap<String, String> info);
 	}
 
-    // here starts my part
 	class Command extends Instruction {
 		private String com;
 		private String var1;
 		private String var2;
 		private int x;
 		private int y;
+		private HashMap<String, Integer> hm = new HashMap<String, Integer>() { {
+		put("north", 0) ; put("south",  1); put("east", 2); put("west", 3); 
+		  } };
 
 		public Command(Token com, Token var1, Token var2){
 			this.com = com.image.toLowerCase();
@@ -217,17 +219,13 @@ public class Robot
                 }
 				break;
 			case "face":
-                // The robot should turn so that it ends up facing direction O.
 				verify();
-                HashMap<Integer, String> hm = {{"north", 0}, {"east", 2}, {"south", 1}, {"west", 3}};
-
                 int initialOrientation = world.getFacing();
-                int endOrientation = hm.get(var1);
-
-                int nOfRightTurns = this.numberOfRightTurns(initialOrientation, endOrientation);
-                for(int i = 0; i < numberOfRightTurns; i++)
+                int endOrientation = (Integer) hm.get(var1);
+                int nOfRightTurns = numberOfRightTurns(initialOrientation, endOrientation);
+                for(int i = 0; i < nOfRightTurns; i++) { 
                     world.turnRight();
-
+                 }
 				break;
 			case "put":
 				verify();
@@ -300,10 +298,26 @@ public class Robot
 				world.moveForward(x, false);
 				break;
 			case "turn":
-				verifyF(info);
+				verify();
+                if(var1.equals("right")) {
+                    world.turnRight();
+                }  else if(var1.equals("around")) {
+                    world.turnRight();
+                    world.turnRight();
+                } else if(var1.equals("left")) {
+                    world.turnRight();
+                    world.turnRight();
+                    world.turnRight();
+                }
 				break;
 			case "face":
 				verifyF(info);
+                int initialOrientation = world.getFacing();
+                int endOrientation = (Integer) hm.get(var1);
+                int nOfRightTurns = numberOfRightTurns(initialOrientation, endOrientation);
+                for(int i = 0; i < nOfRightTurns; i++) { 
+                    world.turnRight();
+                 }
 				break;
 			case "put":
 				verifyF(info);
@@ -518,50 +532,50 @@ public class Robot
 		}
 
 		public boolean canMoveInDir() {
-				r = true;
-				x = number(var1);
-				point = world.getPosition();
-				if (var2.equals("north")){
-				  for(int i = 0; i < x; i++) {
-				  point.translate(0, -1);
-				  if (r == true) { r = !world.isBlocked(point); }
-				   }
-				  for(int i = 0; i < x; i++) {
-				  point.translate(0, 1);
-				   }
-				  
-				} else if (var2.equals("south")){
-				  for(int i = 0; i < x; i++) {
-				  point.translate(0, 1);
-				  if (r == true) { r = !world.isBlocked(point); }
-				   }
-				  for(int i = 0; i < x; i++) {
-				  point.translate(0, -1);
-				   }
-				  
-				} else if (var2.equals("east")){
-				  for(int i = 0; i < x; i++) {
-				  point.translate(1, 0);
-				  if (r == true) { r = !world.isBlocked(point); }
-				   }
-				  for(int i = 0; i < x; i++) {
-				  point.translate(-1, 0);
-				   }
-				  
-				} else {
-				  for(int i = 0; i < x; i++) {
-				  point.translate(-1, 0);
-				  if (r == true) { r = !world.isBlocked(point); }
-				   }
-				  for(int i = 0; i < x; i++) {
-				  point.translate(1, 0);
-				   }
+			r = true;
+			x = number(var1);
+			point = world.getPosition();
+			if (var2.equals("north")){
+			for(int i = 0; i < x; i++) {
+				point.translate(0, -1);
+				if (r == true) { r = !world.isBlocked(point); }
+				 }
+			for(int i = 0; i < x; i++) {
+				point.translate(0, 1);
 				}
-				return r;
+					  
+			} else if (var2.equals("south")){
+			for(int i = 0; i < x; i++) {
+				point.translate(0, 1);
+				if (r == true) { r = !world.isBlocked(point); }
+				}
+			for(int i = 0; i < x; i++) {
+				point.translate(0, -1);
+				}
+					  
+			} else if (var2.equals("east")){
+			for(int i = 0; i < x; i++) {
+				point.translate(1, 0);
+				if (r == true) { r = !world.isBlocked(point); }
+				}
+			for(int i = 0; i < x; i++) {
+				point.translate(-1, 0);
+				}
+					  
+			} else {
+			for(int i = 0; i < x; i++) {
+				point.translate(-1, 0);
+				if (r == true) { r = !world.isBlocked(point); }
+				}
+			for(int i = 0; i < x; i++) {
+				point.translate(1, 0);
+				}
+			  }
+					return r;
 		  }
 
 		  public boolean canJumpInDir() {
-		    	r = true;
+		   		r = true;
 		    	x = number(var1);
 				point = world.getPosition();
 				if (var2.equals("north")){
@@ -588,62 +602,58 @@ public class Robot
 		    }
 
 		public String convertDirection(String direction) {
-		switch (direction) {
-		case  "front":
-			if (world.facingNorth()) {
-			direction = "north";
-			} else if (world.facingSouth()) {
-			direction = "south";
-			} else if (world.facingEast()) {
-			direction = "east";
-			} else {
-			direction = "west";
-			}
-			break;
-		case  "back":
-			if (world.facingNorth()) {
-			direction = "south";
-			} else if (world.facingSouth()) {
-			direction = "north";
-			} else if (world.facingEast()) {
-			direction = "west";
-			} else {
-			direction = "east";
-			}
-			break;
-		case  "right":
-			if (world.facingNorth()) {
-			direction = "east";
-			} else if (world.facingSouth()) {
-			direction = "west";
-			} else if (world.facingEast()) {
-			direction = "south";
-			} else {
-			direction = "north";
-			}
-			break;
-		case  "left":
-			if (world.facingNorth()) {
-			direction = "west";
-			} else if (world.facingSouth()) {
-			direction = "east";
-			} else if (world.facingEast()) {
-			direction = "north";
-			} else {
-			direction = "south";
-			}
-			break;										
-			}
-		return direction;
+			switch (direction) {
+			case  "front":
+				if (world.facingNorth()) {
+				direction = "north";
+				} else if (world.facingSouth()) {
+				direction = "south";
+				} else if (world.facingEast()) {
+				direction = "east";
+				} else {
+				direction = "west";
+				}
+				break;
+			case  "back":
+				if (world.facingNorth()) {
+				direction = "south";
+				} else if (world.facingSouth()) {
+				direction = "north";
+				} else if (world.facingEast()) {
+				direction = "west";
+				} else {
+				direction = "east";
+				}
+				break;
+			case  "right":
+				if (world.facingNorth()) {
+				direction = "east";
+				} else if (world.facingSouth()) {
+				direction = "west";
+				} else if (world.facingEast()) {
+				direction = "south";
+				} else {
+				direction = "north";
+				}
+				break;
+			case  "left":
+				if (world.facingNorth()) {
+				direction = "west";
+				} else if (world.facingSouth()) {
+				direction = "east";
+				} else if (world.facingEast()) {
+				direction = "north";
+				} else {
+				direction = "south";
+				}
+				break;										
+				}
+			return direction;
 		}
 
 		public boolean run(){
 		  	verify();
 
-<<<<<<< HEAD
-=======
-			boolean r = false;
->>>>>>> 288a16c (add: enunciado.pdf & turn and face commands in Robot.jj)
 			switch(con) {
 			case "facing":
 				if (var1.equals("north")){
@@ -683,32 +693,19 @@ public class Robot
 				r = canMoveInDir();
 				break;
 			case "canjumptothe":
-<<<<<<< HEAD
 				var2 = convertDirection(var2);
 				r = canJumpInDir();
 				break;								
 			case "not":
 				r = !subcondition.run();
 				break;
-=======
-				r = false;
-				break;
-			case "not":
-				r = !subcondition.run();
-				break;
-			default: r = false;
->>>>>>> 288a16c (add: enunciado.pdf & turn and face commands in Robot.jj)
 		} return r;
 		}
 
 		public boolean runFunction(HashMap<String, String> info) {
 			verifyF(info);
-<<<<<<< HEAD
-			
-=======
 
 		   	boolean r = false;
->>>>>>> 288a16c (add: enunciado.pdf & turn and face commands in Robot.jj)
 			switch(con) {
 			case "facing":
 				if (var1.equals("north")){
@@ -748,21 +745,12 @@ public class Robot
 				r = canMoveInDir();
 				break;
 			case "canjumptothe":
-<<<<<<< HEAD
 				var2 = convertDirection(var2);
 				r = canJumpInDir();
 				break;					
 			case "not":
 				r = !subcondition.runFunction(info);
 				break;
-=======
-				r = false;
-				break;
-			case "not":
-				r = !subcondition.runFunction(info);
-				break;
-			default: r = false;
->>>>>>> 288a16c (add: enunciado.pdf & turn and face commands in Robot.jj)
 		} return r;
 		}
 
