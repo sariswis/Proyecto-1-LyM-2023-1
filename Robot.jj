@@ -271,7 +271,7 @@ public class Robot
                     if(initialOrientation > endOrientation)  nOfRightTurns = 1;
                     else nOfRightTurns = 3;
                 } else if(initialOrientation < endOrientation) {
-                    numberOfRightTurns = 1;
+                    nOfRightTurns = 1;
                 } else if(initialOrientation > endOrientation) {
                     nOfRightTurns = 3;
                 }
