@@ -185,6 +185,35 @@ public class Robot
 			this.com = com.image.toLowerCase();
 		}
 
+		public void face() {
+	       int initialOrientation = world.getFacing();
+            int endOrientation = (Integer) hm.get(var1);
+            int nOfRightTurns = numberOfRightTurns(initialOrientation, endOrientation);
+            for(int i = 0; i < nOfRightTurns; i++) { 
+                 world.turnRight();
+            }
+		}
+
+		public int numberOfRightTurns(int initialOrientation, int endOrientation) {
+            int nOfRightTurns = 0;
+            if(initialOrientation != endOrientation) {
+                if((initialOrientation + endOrientation) % 4 == 1)
+                    nOfRightTurns = 2;
+                else if((initialOrientation + endOrientation) == 3) {
+                    if(initialOrientation > endOrientation) {
+                      nOfRightTurns = 1;
+                    } else {
+                      nOfRightTurns = 3;
+                    }
+                } else if(initialOrientation < endOrientation) {
+                    nOfRightTurns = 1;
+                } else if(initialOrientation > endOrientation) {
+                    nOfRightTurns = 3;
+                }
+            }
+            return nOfRightTurns;
+        }
+
 		public void run() {
 		switch(com) {
 			 case "assignto":
@@ -220,12 +249,7 @@ public class Robot
 				break;
 			case "face":
 				verify();
-                int initialOrientation = world.getFacing();
-                int endOrientation = (Integer) hm.get(var1);
-                int nOfRightTurns = numberOfRightTurns(initialOrientation, endOrientation);
-                for(int i = 0; i < nOfRightTurns; i++) { 
-                    world.turnRight();
-                 }
+				face();
 				break;
 			case "put":
 				verify();
@@ -259,23 +283,6 @@ public class Robot
 				break;
 			}
 		}
-
-        public int numberOfRightTurns(int initialOrientation, int endOrientation) {
-            int nOfRightTurns = 0;
-            if(initialOrientation != endOrientation) {
-                if((initialOrientation + endOrientation) == 1 || (initialOrientation + endOrientation) == 5)
-                    nOfRightTurns = 2;
-                else if((initialOrientation+endOrientation) == 3) {
-                    if(initialOrientation > endOrientation)  nOfRightTurns = 1;
-                    else nOfRightTurns = 3;
-                } else if(initialOrientation < endOrientation) {
-                    nOfRightTurns = 1;
-                } else if(initialOrientation > endOrientation) {
-                    nOfRightTurns = 3;
-                }
-            }
-            return nOfRightTurns;
-        }
 
 		public void runFunction(HashMap<String, String> info) {
 		switch(com) {
@@ -312,12 +319,7 @@ public class Robot
 				break;
 			case "face":
 				verifyF(info);
-                int initialOrientation = world.getFacing();
-                int endOrientation = (Integer) hm.get(var1);
-                int nOfRightTurns = numberOfRightTurns(initialOrientation, endOrientation);
-                for(int i = 0; i < nOfRightTurns; i++) { 
-                    world.turnRight();
-                 }
+				face();
 				break;
 			case "put":
 				verifyF(info);
