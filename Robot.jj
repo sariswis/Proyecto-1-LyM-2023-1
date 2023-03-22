@@ -25,11 +25,11 @@ public class Robot
 	private RobotWorldDec world;
 	public String salida = new String();
 
-	private static HashMap<String, String> variables = new HashMap<String, String>();
+	private static HashMap<String, String> variables = new HashMap<>();
 	private static HashMap<String, Function> functions = new HashMap<String, Function>();
 
 	/* Robot Methods */
-	
+
 	public void setWorld(RobotWorld w) {
 		world = (RobotWorldDec) w;	
 	}
@@ -160,7 +160,8 @@ public class Robot
 	abstract void runFunction(HashMap<String, String> info);
 	}
 
-	class Command  extends Instruction {
+    // here starts my part
+	class Command extends Instruction {
 		private String com;
 		private String var1;
 		private String var2;
@@ -194,7 +195,7 @@ public class Robot
 				if (!world.isBlocked(new Point(x, y))) {
 				  world.setPostion(x, y);
 				} else {
-				throw new Error("Cannot move to " + x + ", " + y + " because that position is blocked");
+				    throw new Error("Cannot move to " + x + ", " + y + " because that position is blocked");
 				}
 				break;
 			case "move":
@@ -204,9 +205,29 @@ public class Robot
 				break;
 			case "turn":
 				verify();
+                if(var1.equals("right")) {
+                    world.turnRight();
+                }  else if(var1.equals("around")) {
+                    world.turnRight();
+                    world.turnRight();
+                } else if(var1.equals("left")) {
+                    world.turnRight();
+                    world.turnRight();
+                    world.turnRight();
+                }
 				break;
 			case "face":
+                // The robot should turn so that it ends up facing direction O.
 				verify();
+                HashMap<Integer, String> hm = {{"north", 0}, {"east", 2}, {"south", 1}, {"west", 3}};
+
+                int initialOrientation = world.getFacing();
+                int endOrientation = hm.get(var1);
+
+                int nOfRightTurns = this.numberOfRightTurns(initialOrientation, endOrientation);
+                for(int i = 0; i < numberOfRightTurns; i++)
+                    world.turnRight();
+
 				break;
 			case "put":
 				verify();
@@ -237,9 +258,26 @@ public class Robot
 				break;
 			case "jumpindir":
 				verify();
-				break;											
+				break;
 			}
 		}
+
+        public int numberOfRightTurns(int initialOrientation, int endOrientation) {
+            int nOfRightTurns = 0;
+            if(initialOrientation != endOrientation) {
+                if((initialOrientation + endOrientation) == 1 || (initialOrientation + endOrientation) == 5)
+                    nOfRightTurns = 2;
+                else if((initialOrientation+endOrientation) == 3) {
+                    if(initialOrientation > endOrientation)  nOfRightTurns = 1;
+                    else nOfRightTurns = 3;
+                } else if(initialOrientation < endOrientation) {
+                    numberOfRightTurns = 1;
+                } else if(initialOrientation > endOrientation) {
+                    nOfRightTurns = 3;
+                }
+            }
+            return nOfRightTurns;
+        }
 
 		public void runFunction(HashMap<String, String> info) {
 		switch(com) {
@@ -266,7 +304,7 @@ public class Robot
 				break;
 			case "face":
 				verifyF(info);
-				break;				
+				break;
 			case "put":
 				verifyF(info);
 				x = number(var1);
@@ -296,7 +334,7 @@ public class Robot
 				break;
 			case "jumpindir":
 				verifyF(info);
-				break;						
+				break;
 			}
 		}
 
@@ -315,7 +353,7 @@ public class Robot
 		    } else if  (variables.containsKey(var1) && variables.get(var1) != null) {
 			var1 = (String) variables.get(var1);
 		    }
-		    
+
 		  if (info.containsKey(var2) && info.get(var2) != null) {
 			var2 = (String) info.get(var2);
 		    } else if  (variables.containsKey(var2) && variables.get(var2) != null) {
@@ -329,7 +367,7 @@ public class Robot
 		private Function function;
 		private ArrayList<String> params;
 		private ArrayList<String> values = new ArrayList<String>();
-	  
+
 	  	public ProcedureCall(Token name) {
 		this.name = name;
 		this.function = Robot.getFunction(name);
@@ -340,7 +378,7 @@ public class Robot
 		String image = token.image.toLowerCase();
         values.add(image);
 	  	 }
-	  	 
+
 		public void run() {
 		   verify();
 		   execute();
@@ -420,7 +458,7 @@ public class Robot
 			case "repeat":
 				verify();
 				for (int i = 0;  i < number(var);  i++) {block1.run();}
-				break;			
+				break;
 		    }
 		}
 
@@ -435,7 +473,7 @@ public class Robot
 			case "repeat":
 				verifyF(info);
 				for (int i = 0;  i < number(var);  i++) {block1.runFunction(info);}
-				break;			
+				break;
 		    }
 		}
 
@@ -453,7 +491,7 @@ public class Robot
 			}
 		}
 	}
-	
+
 	class Condition {
 		private String con;
 		private String var1;
@@ -602,6 +640,10 @@ public class Robot
 		public boolean run(){
 		  	verify();
 
+<<<<<<< HEAD
+=======
+			boolean r = false;
+>>>>>>> 288a16c (add: enunciado.pdf & turn and face commands in Robot.jj)
 			switch(con) {
 			case "facing":
 				if (var1.equals("north")){
@@ -641,18 +683,32 @@ public class Robot
 				r = canMoveInDir();
 				break;
 			case "canjumptothe":
+<<<<<<< HEAD
 				var2 = convertDirection(var2);
 				r = canJumpInDir();
 				break;								
 			case "not":
 				r = !subcondition.run();
 				break;
+=======
+				r = false;
+				break;
+			case "not":
+				r = !subcondition.run();
+				break;
+			default: r = false;
+>>>>>>> 288a16c (add: enunciado.pdf & turn and face commands in Robot.jj)
 		} return r;
 		}
 
 		public boolean runFunction(HashMap<String, String> info) {
 			verifyF(info);
+<<<<<<< HEAD
 			
+=======
+
+		   	boolean r = false;
+>>>>>>> 288a16c (add: enunciado.pdf & turn and face commands in Robot.jj)
 			switch(con) {
 			case "facing":
 				if (var1.equals("north")){
@@ -692,12 +748,21 @@ public class Robot
 				r = canMoveInDir();
 				break;
 			case "canjumptothe":
+<<<<<<< HEAD
 				var2 = convertDirection(var2);
 				r = canJumpInDir();
 				break;					
 			case "not":
 				r = !subcondition.runFunction(info);
 				break;
+=======
+				r = false;
+				break;
+			case "not":
+				r = !subcondition.runFunction(info);
+				break;
+			default: r = false;
+>>>>>>> 288a16c (add: enunciado.pdf & turn and face commands in Robot.jj)
 		} return r;
 		}
 
@@ -952,9 +1017,3 @@ Block oneInstructionF() : {Block block = new Block(); Instruction ins;} {
 	ins = instructionF() {block.addInstruction(ins); }
 	{ return block; }
 }
-
-
-
-
-
-	
