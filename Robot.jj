@@ -84,53 +84,53 @@ public class Robot
 	}
 
 	public static String convertDirection(String direction) {
-			switch (direction) {
-			case  "front":
-				if (world.facingNorth()) {
-				direction = "north";
-				} else if (world.facingSouth()) {
-				direction = "south";
-				} else if (world.facingEast()) {
-				direction = "east";
-				} else {
-				direction = "west";
-				}
-				break;
-			case  "back":
-				if (world.facingNorth()) {
-				direction = "south";
-				} else if (world.facingSouth()) {
-				direction = "north";
-				} else if (world.facingEast()) {
-				direction = "west";
-				} else {
-				direction = "east";
-				}
-				break;
-			case  "right":
-				if (world.facingNorth()) {
-				direction = "east";
-				} else if (world.facingSouth()) {
-				direction = "west";
-				} else if (world.facingEast()) {
-				direction = "south";
-				} else {
-				direction = "north";
-				}
-				break;
-			case  "left":
-				if (world.facingNorth()) {
-				direction = "west";
-				} else if (world.facingSouth()) {
-				direction = "east";
-				} else if (world.facingEast()) {
-				direction = "north";
-				} else {
-				direction = "south";
-				}
-				break;										
-				}
-			return direction;
+	switch (direction) {
+	case  "front":
+		if (world.facingNorth()) {
+		direction = "north";
+		} else if (world.facingSouth()) {
+		direction = "south";
+		} else if (world.facingEast()) {
+		direction = "east";
+		} else {
+		direction = "west";
+		}
+		break;
+	case  "back":
+		if (world.facingNorth()) {
+		direction = "south";
+		} else if (world.facingSouth()) {
+		direction = "north";
+		} else if (world.facingEast()) {
+		direction = "west";
+		} else {
+		direction = "east";
+		}
+		break;
+	case  "right":
+		if (world.facingNorth()) {
+		direction = "east";
+		} else if (world.facingSouth()) {
+		direction = "west";
+		} else if (world.facingEast()) {
+		direction = "south";
+		} else {
+		direction = "north";
+		}
+		break;
+	case  "left":
+		if (world.facingNorth()) {
+		direction = "west";
+		} else if (world.facingSouth()) {
+		direction = "east";
+		} else if (world.facingEast()) {
+		direction = "north";
+		} else {
+		direction = "south";
+		}
+		break;										
+		}
+	return direction;
 		}
 
 
@@ -755,16 +755,16 @@ public class Robot
 				break;
 			case "canput":
 				x = number(var1);
-				if (var2.equals("chips") && x < 2){
-					r = !world.chipExists();
+				if (var2.equals("chips")){
+					r = world.freeSpacesForChips() >= x;
 				} else if (var2.equals("balloons")){
-					r = !world.containsBallons();
+					r = !world.chipExists();
 				}
 				break;
 			case "canpick":
 				x = number(var1);
-				if (var2.equals("chips") && x < 2){
-					r = world.chipExists();
+				if (var2.equals("chips")){
+					r = world.chipsToPick() >= x;
 				} else if (var2.equals("balloons")){
 					r = world.countBalloons() >= x;
 				}
